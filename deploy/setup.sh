@@ -65,14 +65,19 @@ PORT=5000
 EOF
 
 # Install backend dependencies
+# --ignore-scripts blocks malicious postinstall hooks from executing during package installation.
+# Axios versions 1.14.1 and 0.30.4 were compromised via a supply chain attack that used a
+# postinstall hook to drop a plain-crypto-js RAT payload on the host. --ignore-scripts
+# mitigates this class of attack. If any package legitimately requires postinstall scripts,
+# run them explicitly and audit them first.
 echo "Installing backend dependencies..."
 cd /var/www/vulnops/backend
-npm install --production
+npm install --production --ignore-scripts
 
 # Build frontend
 echo "Building frontend..."
 cd /var/www/vulnops/frontend
-npm install
+npm install --ignore-scripts
 npm run build
 
 # Configure Nginx
