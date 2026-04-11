@@ -3,3 +3,10 @@ dist/
 .env
 *.log
 .DS_Store
+
+# Claude
+CLAUDE.md
+.claude/
+
+# Local dev log (synced to Notion separately)
+DEVLOG.md
