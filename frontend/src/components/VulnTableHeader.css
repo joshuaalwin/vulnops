@@ -1,0 +1,22 @@
+.vuln-table-header {
+  display: grid;
+  grid-template-columns: 130px 1fr 100px 64px 110px 100px 60px;
+  align-items: center;
+  padding: 0.35rem 1.4rem;
+  margin-bottom: 3px;
+}
+
+.vuln-table-header span {
+  font-family: var(--font-body);
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+}
+
+.col-cvss,
+.col-notes { text-align: right; }
+
+.col-severity,
+.col-status { text-align: center; }

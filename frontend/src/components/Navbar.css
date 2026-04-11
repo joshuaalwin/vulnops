@@ -1,0 +1,77 @@
+.navbar {
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.navbar-inner {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 58px;
+}
+
+.navbar-brand {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  letter-spacing: -0.01em;
+}
+
+.navbar-brand:hover {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.brand-logo {
+  height: 30px;
+  width: auto;
+}
+
+.navbar-links {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.navbar-links a {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius);
+  transition: color 0.15s, background 0.15s;
+}
+
+.navbar-links a:hover {
+  color: var(--text);
+  background: var(--surface);
+  text-decoration: none;
+}
+
+.btn-report {
+  background: var(--accent);
+  color: #fff !important;
+  padding: 0.38rem 0.9rem;
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.8rem;
+  letter-spacing: 0.01em;
+  transition: opacity 0.15s;
+}
+
+.btn-report:hover {
+  opacity: 0.85;
+  text-decoration: none;
+  color: #fff;
+}

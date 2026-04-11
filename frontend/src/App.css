@@ -1,0 +1,17 @@
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 2rem 2.5rem;
+  width: 100%;
+  flex: 1;
+}
+
+.main-content:has(.form-page) {
+  padding: 0;
+}

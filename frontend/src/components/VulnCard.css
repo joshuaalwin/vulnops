@@ -1,0 +1,115 @@
+.vuln-row {
+  display: grid;
+  grid-template-columns: 130px 1fr 100px 64px 110px 100px 60px;
+  align-items: center;
+  padding: 0.75rem 1.4rem;
+  border: 1px solid var(--border);
+  border-left: 3px solid transparent;
+  border-radius: var(--radius);
+  background: var(--surface);
+  transition: background 0.1s;
+  gap: 0;
+}
+
+.vuln-row:hover {
+  background: var(--surface-2);
+}
+
+.vuln-row-critical { border-left-color: var(--critical); }
+.vuln-row-high     { border-left-color: var(--high); }
+.vuln-row-medium   { border-left-color: var(--medium); }
+.vuln-row-low      { border-left-color: var(--low); }
+.vuln-row-info     { border-left-color: var(--info); }
+
+/* ── Columns ── */
+
+.col-cve {
+  padding-right: 1rem;
+}
+
+.cve-link {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.cve-link:hover {
+  text-decoration: underline;
+}
+
+.col-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding-right: 1rem;
+  min-width: 0;
+}
+
+.vuln-title-link {
+  font-family: var(--font-body);
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.1s;
+  letter-spacing: -0.01em;
+}
+
+.vuln-title-link:hover {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.vuln-product-inline {
+  font-family: var(--font-body);
+  font-size: 0.71rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 400;
+}
+
+.col-severity {
+  display: flex;
+  justify-content: center;
+}
+
+.col-cvss {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: right;
+  padding-right: 1rem;
+}
+
+.cvss-critical { color: var(--critical); }
+.cvss-high     { color: var(--high); }
+.cvss-medium   { color: var(--medium); }
+.cvss-low      { color: var(--low); }
+.cvss-info     { color: var(--text-muted); }
+
+.col-status {
+  display: flex;
+  justify-content: center;
+}
+
+.col-date {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  padding-left: 0.5rem;
+  letter-spacing: 0.01em;
+}
+
+.col-notes {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: right;
+}

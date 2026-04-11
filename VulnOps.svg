@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 235 150" width="235" height="150">
+  <rect width="235" height="150" rx="15" fill="#0B132B" />
+  
+  <defs>
+    <linearGradient id="devOpsGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3A506B" />
+      <stop offset="100%" stop-color="#5BC0BE" />
+    </linearGradient>
+    
+    <linearGradient id="securityGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00E5FF" />
+      <stop offset="100%" stop-color="#0D47A1" />
+    </linearGradient>
+  </defs>
+
+  <path d="M 120,75 C 90,25 35,25 35,75 C 35,125 90,125 120,75" 
+        fill="none" stroke="url(#devOpsGradient)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <path d="M 120,75 L 150,35 L 185,35 L 200,50 L 200,85 L 160,120 Z" 
+        fill="none" stroke="url(#securityGradient)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <circle cx="120" cy="75" r="10" fill="#0B132B" stroke="#00E5FF" stroke-width="3"/>
+  
+  <circle cx="120" cy="73" r="3" fill="#00E5FF" />
+  <path d="M 118,75 L 122,75 L 123,81 L 117,81 Z" fill="#00E5FF" />
+</svg>

@@ -1,0 +1,70 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+html {
+  zoom: 1.1;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg: #0f1117;
+  --surface: #181c26;
+  --surface-2: #1e2333;
+  --border: #252d3d;
+  --border-bright: #2f3a50;
+  --text: #e2e8f4;
+  --text-muted: #64748b;
+  --accent: #3b82f6;
+  --accent-dim: rgba(59,130,246,0.1);
+
+  --critical: #ef4444;
+  --high: #f97316;
+  --medium: #eab308;
+  --low: #22c55e;
+  --info: #3b82f6;
+
+  --status-open: #818cf8;
+  --status-in-progress: #f59e0b;
+  --status-mitigated: #38bdf8;
+  --status-resolved: #22c55e;
+
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+
+  --radius: 6px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+button, input, select, textarea {
+  cursor: pointer;
+  font-family: var(--font-body);
+}
+
+input, textarea { cursor: text; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

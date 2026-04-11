@@ -1,0 +1,39 @@
+.form-page {
+  height: calc(100vh - 58px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 2rem;
+  overflow: hidden;
+}
+
+.form-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  width: 100%;
+  max-width: 860px;
+  overflow: hidden;
+}
+
+.form-card-header {
+  padding: 1.25rem 1.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.form-page-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.2rem;
+}
+
+.form-page-subtitle {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* push form body inside the card */
+.form-card .vuln-form {
+  padding: 1.25rem 1.75rem 1.5rem;
+  max-width: 100%;
+}
