@@ -10,3 +10,10 @@ CLAUDE.md
 
 # Local dev log (synced to Notion separately)
 DEVLOG.md
+
+# Personal learning notes (local only)
+learning/
+
+# Terraform
+terraform/.terraform/
+terraform/tfplan
