@@ -14,4 +14,5 @@
 
 .main-content:has(.form-page) {
   padding: 0;
+  max-width: 100%;
 }
