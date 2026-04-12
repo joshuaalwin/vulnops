@@ -53,16 +53,19 @@ All three tiers run in Kubernetes on EKS. Backend and database are ClusterIP-onl
 - gp3 StorageClass with `ebs.csi.eks.amazonaws.com` (EKS Auto Mode CSI provisioner)
 - Internet-facing NLB for frontend; backend and DB are ClusterIP-only
 
-### Phase 5 — CI/CD (GitHub Actions) ⬜
-- OIDC federation for AWS auth — no long-lived IAM credentials stored as GitHub secrets
-- On push: build images, push to GHCR, update manifests, deploy to EKS
+### Phase 5 — CI/CD (GitHub Actions + ArgoCD) ✅
+- 8-stage pipeline: Gitleaks → ESLint → npm audit → Docker build+push → Trivy → Checkov → Hadolint → manifest update
+- Images pushed to GHCR tagged with commit SHA — every running image traceable to the exact commit that built it
+- SBOM and build provenance attestation attached to every image automatically via Docker Buildx
+- ArgoCD running in EKS — watches git, auto-deploys on manifest changes, reverts manual `kubectl` drift
+- CI never holds cluster credentials — ArgoCD pulls from git (GitOps pattern)
+- `GITHUB_TOKEN` for GHCR auth — no long-lived PATs stored as secrets
 
 ### Phase 6 — Security tooling in CI/CD ⬜
-- Trivy: container image scanning, fail on CRITICAL
-- Checkov: Terraform + K8s manifest scanning
-- TruffleHog: secret scanning on every push
-- Hadolint: Dockerfile linting
-- Syft: SBOM generation on every image build
+- Tighten Trivy gate: hard fail on CRITICAL (currently `continue-on-error` for Phase 5 demo)
+- Tighten Checkov: remove `soft_fail`, gate on findings
+- Enable VPC CNI NetworkPolicy controller in EKS for actual policy enforcement
+- Upgrade `node:20-alpine` base image once Trivy gate is demonstrated
 
 ### Phase 7 — Application security ⬜
 - JWT authentication, RBAC (reporter/reviewer/admin)
@@ -113,17 +116,19 @@ Frontend at `http://localhost:5173`, API at `http://localhost:5000`.
 
 ```
 VulnOps/
-├── backend/           # Express API + DB schema
-├── frontend/          # React + Vite + nginx.conf
-├── k8s/               # Kubernetes manifests
+├── backend/              # Express API + DB schema
+├── frontend/             # React + Vite + nginx.conf
+├── k8s/                  # Kubernetes manifests
 │   ├── namespace.yaml
 │   ├── secrets.yaml.example
 │   ├── postgres/
 │   ├── backend/
 │   ├── frontend/
-│   └── network-policies/
-├── terraform/         # VPC + EKS infrastructure
-├── deploy/            # Legacy EC2 setup script
+│   ├── network-policies/
+│   └── argocd/           # ArgoCD Application CRD
+├── terraform/            # VPC + EKS infrastructure
+├── .github/workflows/    # GitHub Actions CI pipeline
+├── deploy/               # Legacy EC2 setup script
 └── docker-compose.yml
 ```
 
@@ -143,3 +148,6 @@ VulnOps/
 | `automountServiceAccountToken: false` | No pod needs K8s API access — removes an auto-mounted credential from every pod |
 | GHCR over Docker Hub | CI/CD uses built-in `GITHUB_TOKEN` — no stored PATs required |
 | Baseline PSS for postgres only | Postgres initdb requires `CAP_CHOWN` to chmod its data directory. Stateless tiers stay restricted. |
+| SHA tag over `latest` for images | `latest` is mutable and untraceable. SHA tag ties every running pod to the exact commit that built it. |
+| ArgoCD GitOps over `kubectl` from CI | CI never holds cluster credentials. Cluster pulls from git. `selfHeal` enforces git as the only write path to production. |
+| SBOM + provenance on every image | Attached to GHCR automatically via BuildKit. Full software supply chain transparency — what's in the image and where it was built. |
