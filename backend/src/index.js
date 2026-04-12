@@ -1,3 +1,4 @@
+// VulnOps backend — Phase 5 CI/CD golden test
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
