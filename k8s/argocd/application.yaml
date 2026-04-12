@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vulnops
+  namespace: argocd
+  # ArgoCD will garbage-collect this Application if the manifest is deleted from git
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/joshuaalwin/vulnops.git
+    targetRevision: main
+    path: k8s
+    # Exclude the argocd/ subdirectory itself to avoid ArgoCD trying to manage its own Application
+    directory:
+      exclude: "argocd/**"
+
+  destination:
+    server: https://kubernetes.default.svc  # The cluster ArgoCD is running in
+    namespace: vulnops
+
+  syncPolicy:
+    automated:
+      prune: true      # Remove resources deleted from git
+      selfHeal: true   # Revert manual kubectl changes — git is the only source of truth
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground  # Wait for child resources to be deleted before parent
+      - PruneLast=true                     # Prune after all other sync operations complete

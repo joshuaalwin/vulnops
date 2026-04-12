@@ -1,0 +1,272 @@
+# ==============================================================
+# VulnOps — DevSecOps CI Pipeline
+# ==============================================================
+# Triggers on every push and pull request to main.
+# Stages: Secret Scan → Lint → SCA → Build+Push → Image Scan → IaC Scan → Dockerfile Lint → Update Manifests
+# CD is handled by ArgoCD watching the k8s/ directory in this repo.
+# ==============================================================
+
+name: VulnOps CI Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Restrict default token permissions to read-only
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/vulnops-backend
+  FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/vulnops-frontend
+
+jobs:
+  # ==============================================================
+  # STAGE 1: Secret Scanning (Gitleaks)
+  # Runs first — no point building if credentials are exposed
+  # ==============================================================
+  secret-scan:
+    name: "Secret Scan"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history needed for Gitleaks
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ==============================================================
+  # STAGE 2: Lint
+  # ==============================================================
+  lint:
+    name: "Lint (${{ matrix.component }})"
+    runs-on: ubuntu-latest
+    needs: secret-scan
+    strategy:
+      matrix:
+        component: [backend, frontend]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: "${{ matrix.component }}/package-lock.json"
+
+      - name: Install dependencies
+        working-directory: ${{ matrix.component }}
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: ${{ matrix.component }}
+        run: npm run lint
+        continue-on-error: true  # Informational until lint baseline is clean
+
+  # ==============================================================
+  # STAGE 3: Software Composition Analysis (npm audit)
+  # ==============================================================
+  sca:
+    name: "Dependency Audit (${{ matrix.component }})"
+    runs-on: ubuntu-latest
+    needs: secret-scan
+    strategy:
+      matrix:
+        component: [backend, frontend]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: "${{ matrix.component }}/package-lock.json"
+
+      - name: Install dependencies
+        working-directory: ${{ matrix.component }}
+        run: npm ci
+
+      - name: npm audit
+        working-directory: ${{ matrix.component }}
+        run: npm audit --audit-level=critical
+        # Fail on CRITICAL only — HIGH allowed until Phase 6 baseline is established
+
+  # ==============================================================
+  # STAGE 4: Build & Push Container Images to GHCR
+  # Only pushes on push to main (not on PRs)
+  # ==============================================================
+  build:
+    name: "Build & Push (${{ matrix.component }})"
+    runs-on: ubuntu-latest
+    needs: [lint, sca]
+    permissions:
+      contents: read
+      packages: write   # Push to GHCR
+    strategy:
+      matrix:
+        component: [backend, frontend]
+    outputs:
+      # Pass image SHA tags to downstream jobs
+      backend-tag: ${{ steps.sha.outputs.short }}
+      frontend-tag: ${{ steps.sha.outputs.short }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get short SHA
+        id: sha
+        run: echo "short=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push ${{ matrix.component }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.component }}
+          file: ./${{ matrix.component }}/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ matrix.component == 'backend' && env.BACKEND_IMAGE || env.FRONTEND_IMAGE }}:${{ steps.sha.outputs.short }}
+            ${{ matrix.component == 'backend' && env.BACKEND_IMAGE || env.FRONTEND_IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true   # Build provenance attestation
+          sbom: true         # SBOM generated and attached to image automatically
+
+  # ==============================================================
+  # STAGE 5: Container Image Scanning (Trivy)
+  # Fails on CRITICAL or HIGH unpatched CVEs
+  # ==============================================================
+  image-scan:
+    name: "Image Scan (${{ matrix.component }})"
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      matrix:
+        component: [backend, frontend]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build image for scanning
+        run: docker build -t vulnops-${{ matrix.component }}:scan ./${{ matrix.component }}
+
+      - name: Run Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "vulnops-${{ matrix.component }}:scan"
+          format: "table"
+          exit-code: "1"
+          ignore-unfixed: true         # Skip CVEs with no available fix
+          vuln-type: "os,library"
+          severity: "CRITICAL,HIGH"
+          timeout: "10m"
+        continue-on-error: true
+        # continue-on-error: intentional — node:20-alpine build stage carries known CVEs
+        # by design (Phase 6 demo target). Remove once base image is upgraded.
+
+  # ==============================================================
+  # STAGE 6: IaC Security Scan (Checkov)
+  # Scans Terraform and Kubernetes manifests
+  # ==============================================================
+  iac-scan:
+    name: "IaC Security Scan"
+    runs-on: ubuntu-latest
+    needs: secret-scan
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Checkov — Terraform
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: terraform/
+          framework: terraform
+          soft_fail: true   # Informational for now — tighten in Phase 6
+          skip_check: CKV_AWS_39,CKV_AWS_58  # Public EKS endpoint (intentional for dev)
+          output_format: cli
+
+      - name: Checkov — Kubernetes manifests
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: k8s/
+          framework: kubernetes
+          soft_fail: true
+          output_format: cli
+
+  # ==============================================================
+  # STAGE 7: Dockerfile Lint (Hadolint)
+  # ==============================================================
+  dockerfile-lint:
+    name: "Dockerfile Lint (${{ matrix.component }})"
+    runs-on: ubuntu-latest
+    needs: secret-scan
+    strategy:
+      matrix:
+        component: [backend, frontend]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: ${{ matrix.component }}/Dockerfile
+          failure-threshold: error  # Warn on warnings, fail only on errors
+
+  # ==============================================================
+  # STAGE 8: Update K8s Manifests with New Image Tags
+  # Only runs on push to main (not PRs)
+  # ArgoCD watches the repo and deploys when this commit lands
+  # ==============================================================
+  update-manifests:
+    name: "Update K8s Manifests"
+    runs-on: ubuntu-latest
+    needs: [build, image-scan, iac-scan, dockerfile-lint]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write   # Commit manifest changes back to repo
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get short SHA
+        id: sha
+        run: echo "short=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
+      - name: Update backend deployment image tag
+        run: |
+          sed -i "s|image: ghcr.io/joshuaalwin/vulnops-backend:.*|image: ${BACKEND_IMAGE}:${{ steps.sha.outputs.short }}|" k8s/backend/deployment.yaml
+
+      - name: Update frontend deployment image tag
+        run: |
+          sed -i "s|image: ghcr.io/joshuaalwin/vulnops-frontend:.*|image: ${FRONTEND_IMAGE}:${{ steps.sha.outputs.short }}|" k8s/frontend/deployment.yaml
+
+      - name: Commit and push manifest updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add k8s/backend/deployment.yaml k8s/frontend/deployment.yaml
+          git diff --cached --quiet || git commit -m "ci: update images to ${{ steps.sha.outputs.short }} [skip ci]"
+          git push
