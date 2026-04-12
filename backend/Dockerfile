@@ -1,4 +1,8 @@
 # ---- Build stage ----
+# INTENTIONAL: node:20-alpine is used here deliberately to carry known CVEs.
+# This will cause the Trivy image scan in the Phase 6 CI pipeline to fail,
+# demonstrating that the security gate catches vulnerable base images.
+# Will be upgraded to a current digest-pinned image once the gate is shown working.
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json* ./
@@ -11,7 +15,7 @@ FROM node:20-alpine AS production
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 # Security: remove unnecessary packages
-RUN apk --no-cache add dumb-init
+RUN apk --no-cache add dumb-init=1.2.5-r3
 
 WORKDIR /app
 
