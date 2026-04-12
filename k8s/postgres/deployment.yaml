@@ -16,6 +16,8 @@ spec:
         app: vulnops-postgres
     spec:
       automountServiceAccountToken: false  # postgres has no need to call the K8s API
+      imagePullSecrets:
+        - name: ghcr-secret
       securityContext:
         runAsNonRoot: true
         runAsUser: 1001   # bitnami/postgresql runs as UID 1001
