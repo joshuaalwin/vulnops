@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vulnops-postgres
+  namespace: vulnops
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate  # EBS (ReadWriteOnce) can't attach to two nodes simultaneously — terminate old pod first
+  selector:
+    matchLabels:
+      app: vulnops-postgres
+  template:
+    metadata:
+      labels:
+        app: vulnops-postgres
+    spec:
+      automountServiceAccountToken: false  # postgres has no need to call the K8s API
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001   # bitnami/postgresql runs as UID 1001
+        runAsGroup: 1001
+        fsGroup: 1001     # ensures the mounted PVC data dir is writable by the postgres user
+        seccompProfile:
+          type: RuntimeDefault  # required by restricted Pod Security Standards
+      containers:
+        - name: postgres
+          image: bitnami/postgresql:16  # runs as non-root — official postgres:16-alpine requires root for initdb
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: vulnops-db-secret  # injects POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /bitnami/postgresql  # bitnami stores data here (not /var/lib/postgresql/data)
+              subPath: pgdata               # avoids EBS lost+found conflicts at volume root
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false  # postgres writes socket/lock/temp files — cannot be read-only
+            capabilities:
+              drop: [ALL]
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "vulnops", "-d", "vulnops"]
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "vulnops", "-d", "vulnops"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: postgres-pvc

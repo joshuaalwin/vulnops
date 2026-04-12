@@ -17,3 +17,6 @@ learning/
 # Terraform
 terraform/.terraform/
 terraform/tfplan
+
+# Kubernetes secrets — never commit real credentials
+k8s/secrets.yaml

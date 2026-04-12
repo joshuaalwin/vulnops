@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: frontend-policy
+  namespace: vulnops
+spec:
+  podSelector:
+    matchLabels:
+      app: vulnops-frontend
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - {}  # allow from anywhere — external traffic arrives via the LoadBalancer
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: vulnops-backend
+      ports:
+        - port: 5000
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - port: 53
+          protocol: UDP  # DNS resolution via CoreDNS

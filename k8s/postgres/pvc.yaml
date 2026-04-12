@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: vulnops
+spec:
+  accessModes:
+    - ReadWriteOnce       # EBS volumes attach to one node at a time
+  storageClassName: gp3   # SSD-backed EBS, provisioned by EKS Auto Mode
+  resources:
+    requests:
+      storage: 5Gi

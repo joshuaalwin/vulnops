@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: vulnops-frontend
+  namespace: vulnops
+spec:
+  type: LoadBalancer  # provisions an AWS ALB — the only public-facing entry point
+  selector:
+    app: vulnops-frontend
+  ports:
+    - port: 80        # external port users hit
+      targetPort: 8080  # forwards to nginx listening on 8080 inside the container

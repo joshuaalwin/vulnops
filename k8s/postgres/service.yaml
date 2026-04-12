@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: vulnops-postgres
+  namespace: vulnops
+spec:
+  type: ClusterIP  # internal only — no external access to the database
+  selector:
+    app: vulnops-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432

@@ -1,0 +1,33 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-policy
+  namespace: vulnops
+spec:
+  podSelector:
+    matchLabels:
+      app: vulnops-backend
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: vulnops-frontend
+      ports:
+        - port: 5000
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: vulnops-postgres
+      ports:
+        - port: 5432
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - port: 53
+          protocol: UDP  # DNS resolution via CoreDNS
