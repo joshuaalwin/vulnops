@@ -3,6 +3,9 @@ kind: Service
 metadata:
   name: vulnops-frontend
   namespace: vulnops
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+    service.beta.kubernetes.io/aws-load-balancer-type: external
 spec:
   type: LoadBalancer  # provisions an AWS ALB — the only public-facing entry point
   selector:

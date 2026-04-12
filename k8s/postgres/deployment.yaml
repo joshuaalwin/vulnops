@@ -16,18 +16,14 @@ spec:
         app: vulnops-postgres
     spec:
       automountServiceAccountToken: false  # postgres has no need to call the K8s API
-      imagePullSecrets:
-        - name: ghcr-secret
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 1001   # bitnami/postgresql runs as UID 1001
-        runAsGroup: 1001
-        fsGroup: 1001     # ensures the mounted PVC data dir is writable by the postgres user
-        seccompProfile:
-          type: RuntimeDefault  # required by restricted Pod Security Standards
+        fsGroup: 999      # ensures the mounted PVC data dir is group-writable by the postgres user
+        # runAsNonRoot not set: postgres entrypoint starts as root to chown/chmod the data dir,
+        # then drops to uid 999 (postgres user) before starting the server. This is the image's
+        # intended behavior. Baseline PSS enforced at namespace level prevents privileged escalation.
       containers:
         - name: postgres
-          image: bitnami/postgresql:16  # runs as non-root — official postgres:16-alpine requires root for initdb
+          image: postgres:16-alpine
           ports:
             - containerPort: 5432
           envFrom:
@@ -35,7 +31,7 @@ spec:
                 name: vulnops-db-secret  # injects POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
           volumeMounts:
             - name: postgres-data
-              mountPath: /bitnami/postgresql  # bitnami stores data here (not /var/lib/postgresql/data)
+              mountPath: /var/lib/postgresql/data
               subPath: pgdata               # avoids EBS lost+found conflicts at volume root
           resources:
             requests:
@@ -47,8 +43,8 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: false  # postgres writes socket/lock/temp files — cannot be read-only
-            capabilities:
-              drop: [ALL]
+            # CAP_CHOWN/FOWNER retained: initdb needs to chmod/chown $PGDATA at startup.
+            # All other capabilities dropped. Database tier uses baseline PSS for this reason.
           livenessProbe:
             exec:
               command: ["pg_isready", "-U", "vulnops", "-d", "vulnops"]

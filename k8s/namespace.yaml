@@ -3,7 +3,10 @@ kind: Namespace
 metadata:
   name: vulnops
   labels:
-    # Enforce restricted Pod Security Standard — rejects pods that don't meet it
-    pod-security.kubernetes.io/enforce: restricted
+    # Baseline PSS: prevents privileged containers, host namespaces, and unsafe mounts.
+    # We use baseline (not restricted) because PostgreSQL's initdb requires CAP_CHOWN/FOWNER
+    # to chmod its data directory. Frontend and backend still enforce restricted-equivalent
+    # securityContexts via their own pod specs (drop ALL, runAsNonRoot, no privilege escalation).
+    pod-security.kubernetes.io/enforce: baseline
     pod-security.kubernetes.io/audit: restricted
     pod-security.kubernetes.io/warn: restricted
