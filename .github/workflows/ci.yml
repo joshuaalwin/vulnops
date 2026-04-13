@@ -157,7 +157,7 @@ jobs:
 
       - name: Verify Semgrep detects known vulnerabilities in fixture
         run: |
-          if semgrep scan --config=p/javascript backend/tests/semgrep-fixtures.js; then
+          if semgrep scan --config=p/javascript --error backend/tests/semgrep-fixtures.js; then
             echo "ERROR: Semgrep found no findings in fixture file — verify rule configuration"
             exit 1
           fi
