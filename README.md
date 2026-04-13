@@ -18,11 +18,11 @@ VulnOps lets teams submit CVEs with an ID, severity, affected product, CVSS scor
 The application is deliberately simple. The security architecture around it is not: hardened containers, a locked-down Kubernetes deployment, a 10-stage CI pipeline, and AWS account-level monitoring, all provisioned through code.
 
 <p align="center">
-  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/Vulnops-Dashboard.png" alt="VulnOps dashboard" width="110%"/>
+  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/Vulnops-Dashboard.png" alt="VulnOps dashboard" width="100%"/>
 </p>
 <br>
 <p align="center">
-  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/Vulnops-CVE.png" alt="VulnOps CVE submission form" width="100%"/>
+  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/Vulnops-CVE.png" alt="VulnOps CVE submission form" width="90%"/>
 </p>
 
 The submission form includes a live CVSS v3.1 calculator built on the official FIRST formula. Scores update in real time as attack vector, complexity, privileges, and impact metrics are selected.
