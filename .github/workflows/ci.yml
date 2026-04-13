@@ -2,7 +2,8 @@
 # VulnOps — DevSecOps CI Pipeline
 # ==============================================================
 # Triggers on every push and pull request to main.
-# Stages: Secret Scan → Lint → SCA → Build+Push → Image Scan → IaC Scan → Dockerfile Lint → Update Manifests
+# Stages: Secret Scan → Lint + SCA + SAST → Build+Push → Image Scan → IaC Scan → Dockerfile Lint → Update Manifests
+# SAST: Semgrep (p/nodejs, p/owasp-top-ten, p/javascript) — source scan uploads to Security tab; fixture gate test validates rules fire
 # CD is handled by ArgoCD watching the k8s/ directory in this repo.
 # ==============================================================
 
@@ -103,13 +104,73 @@ jobs:
         # Fail on CRITICAL only — HIGH allowed until Phase 6 baseline is established
 
   # ==============================================================
+  # STAGE 3b: SAST — Source Scan (Semgrep)
+  # Scans application source for security bugs. Results uploaded to GitHub Security tab.
+  # continue-on-error: intentional — establish baseline before gating. Remove in Phase 6.
+  # ==============================================================
+  sast:
+    name: "SAST (Semgrep)"
+    runs-on: ubuntu-latest
+    needs: secret-scan
+    permissions:
+      contents: read
+      security-events: write   # Upload SARIF to GitHub Security tab
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Semgrep
+        run: pip install semgrep
+
+      - name: Run Semgrep on source
+        run: |
+          semgrep scan \
+            --config=p/nodejs \
+            --config=p/owasp-top-ten \
+            --config=p/javascript \
+            --sarif \
+            --output=semgrep.sarif \
+            backend/src/ frontend/src/
+        continue-on-error: true
+
+      - name: Upload SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: semgrep.sarif
+
+  # ==============================================================
+  # STAGE 3c: SAST Gate Test — Validate Semgrep Rules Fire
+  # Runs Semgrep against a fixture file of intentionally insecure code.
+  # Inverted exit code: findings expected = pass. No findings = fail (tool broken).
+  # ==============================================================
+  sast-validate:
+    name: "SAST Gate Test"
+    runs-on: ubuntu-latest
+    needs: secret-scan
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Semgrep
+        run: pip install semgrep
+
+      - name: Verify Semgrep detects known vulnerabilities in fixture
+        run: |
+          if semgrep scan --config=p/javascript backend/tests/semgrep-fixtures.js; then
+            echo "ERROR: Semgrep found no findings in fixture file — verify rule configuration"
+            exit 1
+          fi
+          echo "PASS: Semgrep correctly detected vulnerabilities in test fixture"
+
+  # ==============================================================
   # STAGE 4: Build & Push Container Images to GHCR
   # Only pushes on push to main (not on PRs)
   # ==============================================================
   build:
     name: "Build & Push (${{ matrix.component }})"
     runs-on: ubuntu-latest
-    needs: [lint, sca]
+    needs: [lint, sca, sast, sast-validate]
     permissions:
       contents: read
       packages: write   # Push to GHCR

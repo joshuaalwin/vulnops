@@ -54,11 +54,13 @@ All three tiers run in Kubernetes on EKS. Backend and database are ClusterIP-onl
 - Internet-facing NLB for frontend; backend and DB are ClusterIP-only
 
 ### Phase 5 — CI/CD (GitHub Actions + ArgoCD) ✅
-- 8-stage pipeline: Gitleaks → ESLint → npm audit → Docker build+push → Trivy → Checkov → Hadolint → manifest update
+- 10-stage pipeline: Gitleaks → ESLint → npm audit → Semgrep SAST → SAST gate test → Docker build+push → Trivy → Checkov → Hadolint → manifest update
 - Images pushed to GHCR tagged with commit SHA — every running image traceable to the exact commit that built it
 - SBOM and build provenance attestation attached to every image automatically via Docker Buildx
 - ArgoCD running in EKS — watches git, auto-deploys on manifest changes, reverts manual `kubectl` drift
 - CI never holds cluster credentials — ArgoCD pulls from git (GitOps pattern)
+- Semgrep SAST scanning `p/nodejs`, `p/owasp-top-ten`, `p/javascript` rulesets — findings uploaded to GitHub Security tab
+- Semgrep gate test: inverted exit-code validates rules actually fire against a known-vulnerable fixture; build blocks if Semgrep is misconfigured
 - `GITHUB_TOKEN` for GHCR auth — no long-lived PATs stored as secrets
 
 ### Phase 6 — Security tooling in CI/CD ⬜
