@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="VulnOps.svg" alt="VulnOps" width="180"/>
+</p>
+
 # VulnOps
 
 A CVE registry for tracking and managing vulnerabilities, built as a full-stack DevSecOps project. The application runs on AWS EKS and is deployed through a GitHub Actions CI/CD pipeline with security tooling integrated at every stage.
