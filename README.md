@@ -21,9 +21,13 @@ The application is deliberately simple. The security architecture around it is n
   <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/Vulnops-Dashboard.png" alt="VulnOps dashboard" width="100%"/>
 </p>
 
+The dashboard breaks down the CVE inventory by severity and remediation status. Each entry is filterable by severity level and status, with CVSS scores displayed inline.
+
 <p align="center">
   <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/Vulnops-CVE.png" alt="VulnOps CVE submission form" width="100%"/>
 </p>
+
+The submission form includes a live CVSS v3.1 calculator built on the official FIRST formula. Scores update in real time as attack vector, complexity, privileges, and impact metrics are selected.
 
 ---
 
