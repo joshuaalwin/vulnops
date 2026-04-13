@@ -18,7 +18,7 @@ VulnOps lets teams submit CVEs with an ID, severity, affected product, CVSS scor
 The application is deliberately simple. The security architecture around it is not: hardened containers, a locked-down Kubernetes deployment, a 10-stage CI pipeline, and AWS account-level monitoring, all provisioned through code.
 
 <p align="center">
-  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/Vulnops-Dashboard.png" alt="VulnOps dashboard" width="100%"/>
+  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/Vulnops-Dashboard.png" alt="VulnOps dashboard" width="110%"/>
 </p>
 <br><br><br>
 <p align="center">
