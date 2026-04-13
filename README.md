@@ -20,7 +20,7 @@ The application is deliberately simple. The security architecture around it is n
 <p align="center">
   <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/Vulnops-Dashboard.png" alt="VulnOps dashboard" width="110%"/>
 </p>
-
+<br>
 <p align="center">
   <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/Vulnops-CVE.png" alt="VulnOps CVE submission form" width="100%"/>
 </p>
