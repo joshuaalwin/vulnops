@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="VulnOps.svg" alt="VulnOps" width="180"/>
+  <img src="Vulnops-banner.svg" alt="VulnOps" width="100%"/>
 </p>
 
 # VulnOps
@@ -16,6 +16,10 @@ A CVE registry for tracking and managing vulnerabilities, built as a full-stack 
 VulnOps lets teams submit CVEs with an ID, severity, affected product, CVSS score, description, and remediation status. Each entry supports threaded notes. There is a live CVSS v3.1 calculator on the submission form built on the official FIRST formula.
 
 The application is deliberately simple. The security architecture around it is not: hardened containers, a locked-down Kubernetes deployment, a 10-stage CI pipeline, and AWS account-level monitoring, all provisioned through code.
+
+<p align="center">
+  <img src="Vulnops-UI.png" alt="VulnOps dashboard" width="90%"/>
+</p>
 
 ---
 
