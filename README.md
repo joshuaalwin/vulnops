@@ -153,3 +153,5 @@ VulnOps/
 | SHA tag over `latest` for images | `latest` is mutable and untraceable. SHA tag ties every running pod to the exact commit that built it. |
 | ArgoCD GitOps over `kubectl` from CI | CI never holds cluster credentials. Cluster pulls from git. `selfHeal` enforces git as the only write path to production. |
 | SBOM + provenance on every image | Attached to GHCR automatically via BuildKit. Full software supply chain transparency — what's in the image and where it was built. |
+| Semgrep over CodeQL for SAST | App logic is simple CRUD — CodeQL taint tracking is disproportionate. Semgrep pattern rules are fast, cover the Express/Node.js attack surface, and are directly explainable per finding. |
+| Semgrep gate test (inverted exit code) | Semgrep exits 0 by default even with findings. `--error` flag + inverted exit code means the gate test fails if Semgrep finds nothing — prevents silent SAST bypass where the tool runs but catches nothing. |
