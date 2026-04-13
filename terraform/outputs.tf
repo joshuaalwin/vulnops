@@ -24,5 +24,21 @@ output "region" {
   value       = var.aws_region
 }
 
+# Security monitoring outputs
+output "security_logs_bucket" {
+  description = "S3 bucket storing CloudTrail and VPC Flow Logs"
+  value       = aws_s3_bucket.security_logs.bucket
+}
+
+output "cloudtrail_arn" {
+  description = "CloudTrail trail ARN"
+  value       = aws_cloudtrail.main.arn
+}
+
+output "access_analyzer_arn" {
+  description = "IAM Access Analyzer ARN"
+  value       = aws_accessanalyzer_analyzer.main.arn
+}
+
 # Configure kubectl after apply:
 # aws eks update-kubeconfig --region us-east-1 --name vulnops-eks
