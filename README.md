@@ -141,6 +141,10 @@ Every running image is traceable to the exact commit that built it. `latest` is 
 | VPC Flow Logs to S3 | Same data as CloudWatch Logs, no ingestion cost. Custom format adds pre-NAT source addresses and TCP flags for forensic reconstruction of traffic patterns. |
 | IAM Access Analyzer | Continuously flags resources with policies that grant access from outside the AWS account. Catches misconfigured policies before they become incidents. |
 | Baseline PSS for postgres only | PostgreSQL `initdb` requires `CAP_CHOWN`. Frontend and backend enforce restricted-equivalent controls through their own pod specs. |
+| `helmet()` on the Express API | Adds CSP, `X-Frame-Options`, `Strict-Transport-Security`, `X-Content-Type-Options`, `Referrer-Policy`, and five additional headers on every response. Previously the API returned bare Express defaults with no security headers. |
+| CORS restricted to `ALLOWED_ORIGINS` | `cors()` with no config allows any origin. Locked to an explicit allowlist via env var. Returns 403 on disallowed origins. Server-to-server requests with no `Origin` header still pass through. |
+| Rate limiting: global (200/15 min) + write (30/15 min) | Global limiter prevents request flooding. Stricter per-route limit on `POST`, `PUT`, and `DELETE` reduces write-path abuse. `RateLimit-*` headers returned on every response. |
+| Input validation at the API layer | CVE IDs validated against `CVE-YYYY-NNNNN` format. Severity and status enum-checked before hitting the DB. CVSS score range enforced (0–10). Field length caps on all text inputs. Previously bad input reached the DB and surfaced as opaque 500 errors. |
 
 ---
 
