@@ -65,6 +65,9 @@ function VulnDetail() {
             {vuln.cvss_score && (
               <span className="cvss-score">CVSS {parseFloat(vuln.cvss_score).toFixed(1)}</span>
             )}
+            {vuln.nvd_enriched && (
+              <span className="nvd-badge" title="Data sourced from NVD">NVD Verified</span>
+            )}
           </div>
         </div>
         <div className="detail-actions">

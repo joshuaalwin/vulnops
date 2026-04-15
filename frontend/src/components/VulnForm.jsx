@@ -1,14 +1,51 @@
+import { useState } from 'react';
 import './VulnForm.css';
 import CVSSCalculator from './CVSSCalculator';
 
 const SEVERITIES = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'];
+const CVE_ID_RE = /^CVE-\d{4}-\d{4,}$/i;
+
+function parseVector(vectorString) {
+  if (!vectorString) return {};
+  const vals = {};
+  vectorString.split('/').slice(1).forEach((part) => {
+    const [key, val] = part.split(':');
+    if (key && val) vals[key] = val;
+  });
+  return vals;
+}
 
 function VulnForm({ values, onChange, onSubmit, submitting, error, submitLabel }) {
+  const [lookupState, setLookupState] = useState({ loading: false, msg: '', ok: false });
+  const [nvdVals, setNvdVals] = useState({});
 
   function handleCVSSScore(score, severityLabel) {
     onChange('cvss_score', score !== null ? score : '');
     if (severityLabel && severityLabel !== 'NONE') {
       onChange('severity', severityLabel);
+    }
+  }
+
+  async function handleLookup() {
+    if (!CVE_ID_RE.test(values.cve_id)) {
+      setLookupState({ loading: false, msg: 'Enter a valid CVE ID first (e.g. CVE-2021-44228)', ok: false });
+      return;
+    }
+    setLookupState({ loading: true, msg: '', ok: false });
+    try {
+      const res = await fetch(`/api/nvd/${values.cve_id.toUpperCase()}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setLookupState({ loading: false, msg: data.error, ok: false });
+        return;
+      }
+      if (data.description) onChange('description', data.description);
+      if (data.cvss_score !== null) onChange('cvss_score', data.cvss_score);
+      if (data.severity) onChange('severity', data.severity);
+      setNvdVals(parseVector(data.vector_string));
+      setLookupState({ loading: false, msg: 'Data sourced from NVD. Review all fields before submitting.', ok: true });
+    } catch {
+      setLookupState({ loading: false, msg: 'NVD lookup failed — fill in manually', ok: false });
     }
   }
 
@@ -19,13 +56,23 @@ function VulnForm({ values, onChange, onSubmit, submitting, error, submitLabel }
 
       <div className="form-group form-left">
         <label>CVE ID <span className="required">*</span></label>
-        <input
-          type="text"
-          value={values.cve_id}
-          onChange={(e) => onChange('cve_id', e.target.value)}
-          placeholder="CVE-2024-12345"
-          required
-        />
+        <div className="cve-id-row">
+          <input
+            type="text"
+            value={values.cve_id}
+            onChange={(e) => { onChange('cve_id', e.target.value); setLookupState({ loading: false, msg: '', ok: false }); }}
+            placeholder="CVE-2024-12345"
+            required
+          />
+          <button type="button" className="btn-lookup" onClick={handleLookup} disabled={lookupState.loading}>
+            {lookupState.loading ? 'Looking up…' : 'NVD Lookup'}
+          </button>
+        </div>
+        {lookupState.msg && (
+          <span className={`lookup-msg${lookupState.ok ? ' lookup-ok' : ' lookup-err'}`}>
+            {lookupState.msg}
+          </span>
+        )}
       </div>
 
       <div className="form-group form-left">
@@ -109,7 +156,7 @@ function VulnForm({ values, onChange, onSubmit, submitting, error, submitLabel }
       {/* ── RIGHT COLUMN — CVSS sticky ── */}
       <div className="form-cvss-col">
         <label>CVSS v3.1 Score</label>
-        <CVSSCalculator onScore={handleCVSSScore} />
+        <CVSSCalculator onScore={handleCVSSScore} initialVals={nvdVals} />
         {values.cvss_score !== '' && (
           <span className="cvss-manual-score">
             Calculated: <strong>{parseFloat(values.cvss_score).toFixed(1)}</strong>

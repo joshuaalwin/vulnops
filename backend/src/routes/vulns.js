@@ -1,5 +1,6 @@
 const express = require('express');
 const { pool } = require('../db');
+const { enrichFromNvd } = require('../nvd');
 
 const CVE_ID_RE = /^CVE-\d{4}-\d{4,}$/i;
 const VALID_SEVERITIES = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'];
@@ -100,7 +101,10 @@ module.exports = function vulnsRouter(writeLimiter) {
           reporter ? reporter.slice(0, 100) : 'Anonymous',
         ]
       );
-      res.status(201).json(result.rows[0]);
+      const created = result.rows[0];
+      // Fire-and-forget — does not block the 201 response
+      enrichFromNvd(pool, created.id, created.cve_id);
+      res.status(201).json(created);
     } catch (err) {
       if (err.code === '23505') {
         return res.status(409).json({ error: `CVE ID '${cve_id}' already exists` });

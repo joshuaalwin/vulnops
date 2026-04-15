@@ -38,6 +38,20 @@ async function initDB() {
       );
     `);
 
+    // Idempotent migration: add nvd_enriched column if it doesn't exist
+    await client.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'vulnerabilities' AND column_name = 'nvd_enriched'
+        ) THEN
+          ALTER TABLE vulnerabilities ADD COLUMN nvd_enriched BOOLEAN NOT NULL DEFAULT false;
+        END IF;
+      END
+      $$;
+    `);
+
     console.log('Database tables initialized');
   } finally {
     client.release();

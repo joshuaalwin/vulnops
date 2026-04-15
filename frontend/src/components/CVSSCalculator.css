@@ -103,10 +103,32 @@
 }
 
 .cvss-opt.selected {
-  border-color: var(--accent);
-  color: #e2e8f4;
-  background: rgba(59,130,246,0.18);
   font-weight: 600;
+  color: #e2e8f4;
+}
+
+.cvss-opt.selected-critical {
+  background: rgba(239,68,68,0.18);
+  border-color: var(--critical);
+  color: var(--critical);
+}
+
+.cvss-opt.selected-high {
+  background: rgba(249,115,22,0.18);
+  border-color: var(--high);
+  color: var(--high);
+}
+
+.cvss-opt.selected-medium {
+  background: rgba(234,179,8,0.18);
+  border-color: var(--medium);
+  color: var(--medium);
+}
+
+.cvss-opt.selected-low {
+  background: rgba(34,197,94,0.18);
+  border-color: var(--low);
+  color: var(--low);
 }
 
 /* Tooltip — fixed height so layout never shifts */

@@ -5,63 +5,63 @@ const METRICS = [
   {
     id: 'AV', label: 'Attack Vector',
     options: [
-      { value: 'N', label: 'Network',  short: 'N', tip: 'Exploitable remotely over the internet' },
-      { value: 'A', label: 'Adjacent', short: 'A', tip: 'Requires access to the local network' },
-      { value: 'L', label: 'Local',    short: 'L', tip: 'Requires local access or authenticated session' },
-      { value: 'P', label: 'Physical', short: 'P', tip: 'Requires physical access to the device' },
+      { value: 'N', label: 'Network',  short: 'N', sev: 'critical', tip: 'Exploitable remotely over the internet' },
+      { value: 'A', label: 'Adjacent', short: 'A', sev: 'high',     tip: 'Requires access to the local network' },
+      { value: 'L', label: 'Local',    short: 'L', sev: 'medium',   tip: 'Requires local access or authenticated session' },
+      { value: 'P', label: 'Physical', short: 'P', sev: 'low',      tip: 'Requires physical access to the device' },
     ],
   },
   {
     id: 'AC', label: 'Attack Complexity',
     options: [
-      { value: 'L', label: 'Low',  short: 'L', tip: 'No special conditions required' },
-      { value: 'H', label: 'High', short: 'H', tip: 'Requires specific conditions or reconnaissance' },
+      { value: 'L', label: 'Low',  short: 'L', sev: 'high', tip: 'No special conditions required' },
+      { value: 'H', label: 'High', short: 'H', sev: 'low',  tip: 'Requires specific conditions or reconnaissance' },
     ],
   },
   {
     id: 'PR', label: 'Privileges Required',
     options: [
-      { value: 'N', label: 'None', short: 'N', tip: 'No authentication needed' },
-      { value: 'L', label: 'Low',  short: 'L', tip: 'Basic user privileges required' },
-      { value: 'H', label: 'High', short: 'H', tip: 'Admin/root privileges required' },
+      { value: 'N', label: 'None', short: 'N', sev: 'high',   tip: 'No authentication needed' },
+      { value: 'L', label: 'Low',  short: 'L', sev: 'medium', tip: 'Basic user privileges required' },
+      { value: 'H', label: 'High', short: 'H', sev: 'low',    tip: 'Admin/root privileges required' },
     ],
   },
   {
     id: 'UI', label: 'User Interaction',
     options: [
-      { value: 'N', label: 'None',     short: 'N', tip: 'No user interaction needed' },
-      { value: 'R', label: 'Required', short: 'R', tip: 'Requires a user to take an action' },
+      { value: 'N', label: 'None',     short: 'N', sev: 'high', tip: 'No user interaction needed' },
+      { value: 'R', label: 'Required', short: 'R', sev: 'low',  tip: 'Requires a user to take an action' },
     ],
   },
   {
     id: 'S', label: 'Scope',
     options: [
-      { value: 'U', label: 'Unchanged', short: 'U', tip: 'Impact limited to the vulnerable component' },
-      { value: 'C', label: 'Changed',   short: 'C', tip: 'Impact extends beyond the vulnerable component' },
+      { value: 'U', label: 'Unchanged', short: 'U', sev: 'low',      tip: 'Impact limited to the vulnerable component' },
+      { value: 'C', label: 'Changed',   short: 'C', sev: 'critical', tip: 'Impact extends beyond the vulnerable component' },
     ],
   },
   {
     id: 'C', label: 'Confidentiality',
     options: [
-      { value: 'N', label: 'None', short: 'N', tip: 'No impact on confidentiality' },
-      { value: 'L', label: 'Low',  short: 'L', tip: 'Some restricted information disclosed' },
-      { value: 'H', label: 'High', short: 'H', tip: 'Total loss of confidentiality' },
+      { value: 'N', label: 'None', short: 'N', sev: 'low',      tip: 'No impact on confidentiality' },
+      { value: 'L', label: 'Low',  short: 'L', sev: 'medium',   tip: 'Some restricted information disclosed' },
+      { value: 'H', label: 'High', short: 'H', sev: 'critical', tip: 'Total loss of confidentiality' },
     ],
   },
   {
     id: 'I', label: 'Integrity',
     options: [
-      { value: 'N', label: 'None', short: 'N', tip: 'No impact on integrity' },
-      { value: 'L', label: 'Low',  short: 'L', tip: 'Modification of some data possible' },
-      { value: 'H', label: 'High', short: 'H', tip: 'Total loss of integrity' },
+      { value: 'N', label: 'None', short: 'N', sev: 'low',      tip: 'No impact on integrity' },
+      { value: 'L', label: 'Low',  short: 'L', sev: 'medium',   tip: 'Modification of some data possible' },
+      { value: 'H', label: 'High', short: 'H', sev: 'critical', tip: 'Total loss of integrity' },
     ],
   },
   {
     id: 'A', label: 'Availability',
     options: [
-      { value: 'N', label: 'None', short: 'N', tip: 'No impact on availability' },
-      { value: 'L', label: 'Low',  short: 'L', tip: 'Reduced performance or interruptions' },
-      { value: 'H', label: 'High', short: 'H', tip: 'Total loss of availability' },
+      { value: 'N', label: 'None', short: 'N', sev: 'low',      tip: 'No impact on availability' },
+      { value: 'L', label: 'Low',  short: 'L', sev: 'medium',   tip: 'Reduced performance or interruptions' },
+      { value: 'H', label: 'High', short: 'H', sev: 'critical', tip: 'Total loss of availability' },
     ],
   },
 ];
@@ -122,13 +122,21 @@ function vectorString(v) {
   return parts.join('/');
 }
 
-export default function CVSSCalculator({ onScore }) {
+export default function CVSSCalculator({ onScore, initialVals = {} }) {
   const [vals, setVals] = useState({});
   const [tooltip, setTooltip] = useState(null);
 
   const score = calculateScore(vals);
   const sev   = scoreSeverity(score);
   const vec   = vectorString(vals);
+
+  // Apply NVD-sourced metric values when a lookup populates them
+  useEffect(() => {
+    if (Object.keys(initialVals).length > 0) {
+      setVals(initialVals);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(initialVals)]);
 
   useEffect(() => {
     onScore(score, sev?.label?.toUpperCase() ?? null);
@@ -162,18 +170,21 @@ export default function CVSSCalculator({ onScore }) {
               <span className="cvss-metric-id">({m.id})</span>
             </span>
             <div className="cvss-metric-options">
-              {m.options.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  className={`cvss-opt${vals[m.id] === opt.value ? ' selected' : ''}`}
-                  onClick={() => pick(m.id, opt.value)}
-                  onMouseEnter={() => setTooltip(opt.tip)}
-                  onMouseLeave={() => setTooltip(null)}
-                >
-                  {opt.label}
-                </button>
-              ))}
+              {m.options.map((opt) => {
+                const isSelected = vals[m.id] === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    className={`cvss-opt${isSelected ? ` selected selected-${opt.sev}` : ''}`}
+                    onClick={() => pick(m.id, opt.value)}
+                    onMouseEnter={() => setTooltip(opt.tip)}
+                    onMouseLeave={() => setTooltip(null)}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         ))}

@@ -7,6 +7,7 @@ const { initDB } = require('./db');
 
 const vulnsRouter = require('./routes/vulns');
 const notesRouter = require('./routes/notes');
+const nvdLookupRouter = require('./routes/nvdLookup');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -51,6 +52,7 @@ app.use(express.json({ limit: '50kb' }));
 
 app.use('/api/vulns', vulnsRouter(writeLimiter));
 app.use('/api/notes', notesRouter(writeLimiter));
+app.use('/api/nvd', nvdLookupRouter());
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'vulnops-backend' });

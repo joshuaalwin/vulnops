@@ -130,6 +130,45 @@
   border-radius: var(--radius);
 }
 
+.cve-id-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.cve-id-row input {
+  flex: 1;
+}
+
+.btn-lookup {
+  white-space: nowrap;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: var(--surface);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.btn-lookup:hover:not(:disabled) {
+  background: rgba(59,130,246,0.1);
+}
+
+.btn-lookup:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.lookup-msg {
+  font-size: 0.75rem;
+  margin-top: 0.1rem;
+}
+
+.lookup-ok  { color: #22c55e; }
+.lookup-err { color: var(--critical); }
+
 .btn-submit {
   grid-column: 1;
   background: var(--accent);
