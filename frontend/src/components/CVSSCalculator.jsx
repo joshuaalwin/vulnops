@@ -27,10 +27,11 @@ const METRICS = [
     ],
   },
   {
-    id: 'UI', label: 'User Interaction',
+    id: 'C', label: 'Confidentiality',
     options: [
-      { value: 'N', label: 'None',     short: 'N', sev: 'high', tip: 'No user interaction needed' },
-      { value: 'R', label: 'Required', short: 'R', sev: 'low',  tip: 'Requires a user to take an action' },
+      { value: 'N', label: 'None', short: 'N', sev: 'low',      tip: 'No impact on confidentiality' },
+      { value: 'L', label: 'Low',  short: 'L', sev: 'medium',   tip: 'Some restricted information disclosed' },
+      { value: 'H', label: 'High', short: 'H', sev: 'critical', tip: 'Total loss of confidentiality' },
     ],
   },
   {
@@ -41,19 +42,18 @@ const METRICS = [
     ],
   },
   {
-    id: 'C', label: 'Confidentiality',
-    options: [
-      { value: 'N', label: 'None', short: 'N', sev: 'low',      tip: 'No impact on confidentiality' },
-      { value: 'L', label: 'Low',  short: 'L', sev: 'medium',   tip: 'Some restricted information disclosed' },
-      { value: 'H', label: 'High', short: 'H', sev: 'critical', tip: 'Total loss of confidentiality' },
-    ],
-  },
-  {
     id: 'I', label: 'Integrity',
     options: [
       { value: 'N', label: 'None', short: 'N', sev: 'low',      tip: 'No impact on integrity' },
       { value: 'L', label: 'Low',  short: 'L', sev: 'medium',   tip: 'Modification of some data possible' },
       { value: 'H', label: 'High', short: 'H', sev: 'critical', tip: 'Total loss of integrity' },
+    ],
+  },
+  {
+    id: 'UI', label: 'User Interaction',
+    options: [
+      { value: 'N', label: 'None',     short: 'N', sev: 'high', tip: 'No user interaction needed' },
+      { value: 'R', label: 'Required', short: 'R', sev: 'low',  tip: 'Requires a user to take an action' },
     ],
   },
   {
@@ -124,7 +124,6 @@ function vectorString(v) {
 
 export default function CVSSCalculator({ onScore, initialVals = {} }) {
   const [vals, setVals] = useState({});
-  const [tooltip, setTooltip] = useState(null);
 
   const score = calculateScore(vals);
   const sev   = scoreSeverity(score);
@@ -178,8 +177,7 @@ export default function CVSSCalculator({ onScore, initialVals = {} }) {
                     type="button"
                     className={`cvss-opt${isSelected ? ` selected selected-${opt.sev}` : ''}`}
                     onClick={() => pick(m.id, opt.value)}
-                    onMouseEnter={() => setTooltip(opt.tip)}
-                    onMouseLeave={() => setTooltip(null)}
+                    title={opt.tip}
                   >
                     {opt.label}
                   </button>
@@ -190,19 +188,18 @@ export default function CVSSCalculator({ onScore, initialVals = {} }) {
         ))}
       </div>
 
-      <div className="cvss-tooltip">{tooltip ?? ''}</div>
+      <div className="cvss-vector-bar">
+        {vec
+          ? <code className="cvss-vector-string">{vec}</code>
+          : <span className="cvss-vector-placeholder">Select all metrics to generate vector string</span>
+        }
+      </div>
 
       <div className="cvss-result">
         <div className={`cvss-score-display ${sev ? sev.cls : 'empty'}`}>
           <span className="cvss-score-number">{score !== null ? score.toFixed(1) : '—'}</span>
           <span className="cvss-score-label">{sev ? sev.label : 'Incomplete'}</span>
         </div>
-        {vec && (
-          <div className="cvss-vector">
-            <span className="cvss-vector-label">Vector</span>
-            <code className="cvss-vector-string">{vec}</code>
-          </div>
-        )}
       </div>
     </div>
   );
