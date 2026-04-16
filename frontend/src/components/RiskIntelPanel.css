@@ -173,6 +173,28 @@
   line-height: 1.6;
 }
 
+/* ── Action label chips ── */
+
+.action-label {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  margin-right: 0.45rem;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.label-immediate  { background: rgba(239,68,68,0.15);   color: var(--critical); border: 1px solid rgba(239,68,68,0.35); }
+.label-urgent     { background: rgba(249,115,22,0.12);  color: #f97316;         border: 1px solid rgba(249,115,22,0.3); }
+.label-short-term { background: rgba(234,179,8,0.12);   color: #eab308;         border: 1px solid rgba(234,179,8,0.3); }
+.label-long-term  { background: rgba(99,102,241,0.1);   color: #818cf8;         border: 1px solid rgba(99,102,241,0.3); }
+.label-ongoing    { background: rgba(59,130,246,0.1);   color: var(--accent);   border: 1px solid rgba(59,130,246,0.3); }
+.label-governance { background: rgba(168,85,247,0.1);   color: #a855f7;         border: 1px solid rgba(168,85,247,0.3); }
+.label-default    { background: rgba(100,116,139,0.1);  color: var(--text-muted); border: 1px solid rgba(100,116,139,0.25); }
+
 /* ── Compliance grid ── */
 
 .risk-compliance-grid {

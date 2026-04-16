@@ -1,13 +1,31 @@
 import { useState } from 'react';
 import './RiskIntelPanel.css';
 
-// Split "1) Foo 2) Bar 3) Baz" into bullet list items
+const LABEL_CLASS = {
+  IMMEDIATE:    'label-immediate',
+  URGENT:       'label-urgent',
+  'SHORT-TERM': 'label-short-term',
+  ONGOING:      'label-ongoing',
+  GOVERNANCE:   'label-governance',
+  'LONG-TERM':  'label-long-term',
+};
+
+// Detects "LABEL:" prefix at the start of a bullet and wraps it in a colored span
+function ActionItem({ text }) {
+  const match = text.match(/^([A-Z][A-Z\s\-]+?):\s*/);
+  if (!match) return <>{text}</>;
+  const label = match[1].trim();
+  const cls = LABEL_CLASS[label] || 'label-default';
+  return <><span className={`action-label ${cls}`}>{label}</span>{text.slice(match[0].length)}</>;
+}
+
+// Split "1) Foo 2) Bar" into bullet list items
 function RecommendedAction({ text }) {
   const items = text.split(/\d+\)/).map(s => s.trim()).filter(Boolean);
   if (items.length <= 1) return <p className="risk-action-text">{text}</p>;
   return (
     <ul className="risk-action-list">
-      {items.map((item, i) => <li key={i}>{item}</li>)}
+      {items.map((item, i) => <li key={i}><ActionItem text={item} /></li>)}
     </ul>
   );
 }
