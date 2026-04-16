@@ -5,6 +5,7 @@ import StatusBadge from '../components/StatusBadge';
 import NoteSection from '../components/NoteSection';
 import EpssBadge from '../components/EpssBadge';
 import KevBadge from '../components/KevBadge';
+import RiskIntelPanel from '../components/RiskIntelPanel';
 import './VulnDetail.css';
 
 function VulnDetail() {
@@ -93,6 +94,11 @@ function VulnDetail() {
             <h2>Description</h2>
             <p>{vuln.description}</p>
           </section>
+          <RiskIntelPanel
+            vulnId={vuln.id}
+            initialData={vuln.ai_risk_intel || null}
+          />
+
           <NoteSection
             vulnId={vuln.id}
             notes={notes}
