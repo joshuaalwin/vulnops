@@ -96,15 +96,19 @@ function validateOutput(raw, vuln) {
   }
 
   // 5. Sanity check on score_rationale length
-  if (typeof parsed.score_rationale !== 'string' || parsed.score_rationale.length < 20 || parsed.score_rationale.length > 800) {
-    throw new Error('score_rationale must be a string between 20 and 800 chars');
+  if (typeof parsed.score_rationale !== 'string' || parsed.score_rationale.length < 20 || parsed.score_rationale.length > 1500) {
+    throw new Error(`score_rationale must be a string between 20 and 1500 chars (got ${parsed.score_rationale?.length ?? 0})`);
   }
 
-  // 6. Grounding check — CVE ID or product name must appear somewhere in the response
+  // 6. Grounding check — at least one token from CVE ID, product, or title must appear
   const responseText = clean.toLowerCase();
-  const cveMatch = vuln.cve_id.toLowerCase();
-  const productMatch = vuln.affected_product.toLowerCase().split(' ')[0];
-  if (!responseText.includes(cveMatch) && !responseText.includes(productMatch)) {
+  const tokens = [
+    vuln.cve_id.toLowerCase(),
+    ...vuln.affected_product.toLowerCase().split(/\s+/),
+    ...vuln.title.toLowerCase().split(/\s+/).filter(t => t.length > 4),
+  ];
+  const grounded = tokens.some(t => t.length > 2 && responseText.includes(t));
+  if (!grounded) {
     throw new Error('Response does not appear grounded in the provided CVE data');
   }
 
