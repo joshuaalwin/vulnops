@@ -9,6 +9,7 @@ const vulnsRouter = require('./routes/vulns');
 const notesRouter = require('./routes/notes');
 const nvdLookupRouter = require('./routes/nvdLookup');
 const { startKevRefreshLoop } = require('./kev');
+const riskIntelRouter = require('./routes/riskIntel');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -48,12 +49,21 @@ const writeLimiter = rateLimit({
   message: { error: 'Too many write requests, please slow down' },
 });
 
+const aiLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'AI rate limit exceeded — 10 requests per hour' },
+});
+
 app.use(globalLimiter);
 app.use(express.json({ limit: '50kb' }));
 
 app.use('/api/vulns', vulnsRouter(writeLimiter));
 app.use('/api/notes', notesRouter(writeLimiter));
 app.use('/api/nvd', nvdLookupRouter());
+app.use('/api/risk-intel', riskIntelRouter(aiLimiter));
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'vulnops-backend' });
