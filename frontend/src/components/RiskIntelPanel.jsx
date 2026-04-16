@@ -10,7 +10,6 @@ const LABEL_CLASS = {
   'LONG-TERM':  'label-long-term',
 };
 
-// Detects "LABEL:" prefix at the start of a bullet and wraps it in a colored span
 function ActionItem({ text }) {
   const match = text.match(/^([A-Z][A-Z\s\-]+?):\s*/);
   if (!match) return <>{text}</>;
@@ -19,7 +18,6 @@ function ActionItem({ text }) {
   return <><span className={`action-label ${cls}`}>{label}</span>{text.slice(match[0].length)}</>;
 }
 
-// Split "1) Foo 2) Bar" into bullet list items
 function RecommendedAction({ text }) {
   const items = text.split(/\d+\)/).map(s => s.trim()).filter(Boolean);
   if (items.length <= 1) return <p className="risk-action-text">{text}</p>;
@@ -27,6 +25,66 @@ function RecommendedAction({ text }) {
     <ul className="risk-action-list">
       {items.map((item, i) => <li key={i}><ActionItem text={item} /></li>)}
     </ul>
+  );
+}
+
+function RiskSkeleton() {
+  return (
+    <div className="risk-skeleton">
+      {/* Header */}
+      <div className="risk-skeleton-header">
+        <div className="skel skel-label" />
+        <div className="skel skel-btn" />
+      </div>
+
+      {/* Score composite */}
+      <div className="risk-skeleton-composite">
+        <div className="skel skel-badge" />
+        <div className="risk-skeleton-lines">
+          <div className="skel skel-line w-full" />
+          <div className="skel skel-line w-3/4" />
+        </div>
+      </div>
+
+      {/* Exploitation Assessment */}
+      <div className="risk-skeleton-section">
+        <div className="skel skel-section-label" />
+        <div className="skel skel-line w-full" />
+        <div className="skel skel-line w-full" />
+        <div className="skel skel-line w-2/3" />
+      </div>
+
+      {/* Compliance Impact */}
+      <div className="risk-skeleton-section">
+        <div className="skel skel-section-label" />
+        <div className="risk-skeleton-cards">
+          {[0, 1, 2, 3].map(i => (
+            <div key={i} className="risk-skeleton-card">
+              <div className="skel skel-card-framework" />
+              <div className="skel skel-card-control" />
+              <div className="skel skel-line w-full" />
+              <div className="skel skel-line w-4/5" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Recommended Action */}
+      <div className="risk-skeleton-section">
+        <div className="skel skel-section-label" />
+        <div className="skel skel-line w-full" />
+        <div className="skel skel-line w-full" />
+        <div className="skel skel-line w-3/4" />
+        <div className="skel skel-line w-full" />
+        <div className="skel skel-line w-1/2" />
+      </div>
+
+      {/* Footer */}
+      <div className="risk-skeleton-footer">
+        <div className="skel skel-footer-text" />
+        <div className="skel skel-footer-text skel-footer-short" />
+      </div>
+    </div>
   );
 }
 
@@ -41,12 +99,10 @@ function RiskIntelPanel({ vulnId, initialData }) {
   const [state, setState] = useState(initialData ? 'loaded' : 'idle');
   const [data, setData] = useState(initialData || null);
   const [error, setError] = useState('');
-  const [streamText, setStreamText] = useState('');
 
   async function generate(forceRefresh = false) {
-    setState('loading');
+    setState('streaming');
     setError('');
-    setStreamText('');
 
     try {
       const url = `/api/risk-intel/${vulnId}${forceRefresh ? '?refresh=1' : ''}`;
@@ -67,8 +123,7 @@ function RiskIntelPanel({ vulnId, initialData }) {
         return;
       }
 
-      // New generation comes back as SSE — stream chunks into preview, then finalize
-      setState('streaming');
+      // New generation via SSE — show skeleton while streaming, snap to loaded on done
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
@@ -79,22 +134,20 @@ function RiskIntelPanel({ vulnId, initialData }) {
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
-        buffer = lines.pop(); // hold incomplete line for next chunk
+        buffer = lines.pop();
 
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
           let payload;
           try { payload = JSON.parse(line.slice(6)); } catch { continue; }
 
-          if (payload.type === 'chunk') {
-            setStreamText(prev => prev + payload.text);
-          } else if (payload.type === 'done') {
+          if (payload.type === 'done') {
             setData(payload.data);
-            setStreamText('');
             setState('loaded');
           } else if (payload.type === 'error') {
             throw new Error(payload.error);
           }
+          // 'chunk' events are intentionally ignored — skeleton is shown instead
         }
       }
     } catch (err) {
@@ -114,25 +167,10 @@ function RiskIntelPanel({ vulnId, initialData }) {
     );
   }
 
-  if (state === 'loading') {
+  if (state === 'loading' || state === 'streaming') {
     return (
-      <div className="risk-intel-panel risk-intel-loading">
-        <span className="risk-spinner" />
-        <span className="risk-loading-text">Connecting to Claude…</span>
-      </div>
-    );
-  }
-
-  if (state === 'streaming') {
-    return (
-      <div className="risk-intel-panel risk-intel-streaming">
-        <div className="risk-stream-header">
-          <span className="risk-spinner" />
-          <span className="risk-loading-text">Analyzing with Claude…</span>
-        </div>
-        {streamText && (
-          <pre className="risk-stream-preview">{streamText}</pre>
-        )}
+      <div className="risk-intel-panel">
+        <RiskSkeleton />
       </div>
     );
   }
@@ -146,7 +184,6 @@ function RiskIntelPanel({ vulnId, initialData }) {
     );
   }
 
-  // Loaded
   const cachedAt = data.cached_at
     ? new Date(data.cached_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
     : null;
