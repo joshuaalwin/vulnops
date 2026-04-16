@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import SeverityBadge from '../components/SeverityBadge';
 import StatusBadge from '../components/StatusBadge';
 import NoteSection from '../components/NoteSection';
+import EpssBadge from '../components/EpssBadge';
 import './VulnDetail.css';
 
 function VulnDetail() {
@@ -67,6 +68,12 @@ function VulnDetail() {
             )}
             {vuln.nvd_enriched && (
               <span className="nvd-badge" title="Data sourced from NVD">NVD Verified</span>
+            )}
+            {vuln.epss_score != null && (
+              <EpssBadge
+                score={parseFloat(vuln.epss_score)}
+                percentile={vuln.epss_percentile}
+              />
             )}
           </div>
         </div>
