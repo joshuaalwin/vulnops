@@ -156,18 +156,18 @@ module.exports = function riskIntelRouter(aiLimiter) {
     try {
       const stream = client.messages.stream({
         model: 'claude-sonnet-4-6',
-        max_tokens: 1024,
+        max_tokens: 2048,
         // Prompt caching: stable system prompt is cached after first use (~0.1x input cost on cache reads)
         system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
         messages: [{ role: 'user', content: buildUserMessage(vuln) }],
       });
 
-      for await (const event of stream) {
-        if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
-          rawOutput += event.delta.text;
-          sseWrite(res, { type: 'chunk', text: event.delta.text });
-        }
-      }
+      stream.on('text', (text) => {
+        rawOutput += text;
+        sseWrite(res, { type: 'chunk', text });
+      });
+
+      await stream.finalMessage();
     } catch (err) {
       console.error(`[RiskIntel] Claude API error for vuln ${vulnId}:`, err.message);
       sseWrite(res, { type: 'error', error: 'AI synthesis failed — try again shortly' });
@@ -179,7 +179,8 @@ module.exports = function riskIntelRouter(aiLimiter) {
     try {
       parsed = validateOutput(rawOutput, vuln);
     } catch (validationErr) {
-      console.error(`[RiskIntel] Validation failed for vuln ${vulnId}:`, validationErr.message, '| Raw (first 200):', rawOutput.slice(0, 200));
+      console.error(`[RiskIntel] Validation failed for vuln ${vulnId}:`, validationErr.message);
+      console.error(`[RiskIntel] Raw output (${rawOutput.length} chars):`, rawOutput.slice(0, 500));
       sseWrite(res, { type: 'error', error: 'AI response failed validation — try again' });
       return res.end();
     }
