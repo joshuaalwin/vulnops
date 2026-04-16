@@ -3,11 +3,12 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const { initDB } = require('./db');
+const { initDB, pool } = require('./db');
 
 const vulnsRouter = require('./routes/vulns');
 const notesRouter = require('./routes/notes');
 const nvdLookupRouter = require('./routes/nvdLookup');
+const { startKevRefreshLoop } = require('./kev');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -70,6 +71,7 @@ app.use((err, req, res, next) => {
 
 async function start() {
   await initDB();
+  startKevRefreshLoop(pool);
   app.listen(PORT, () => {
     console.log(`VulnOps backend running on port ${PORT}`);
   });
