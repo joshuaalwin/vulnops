@@ -52,6 +52,96 @@ async function initDB() {
       $$;
     `);
 
+    // --- EPSS columns ---
+    await client.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'vulnerabilities' AND column_name = 'epss_score'
+        ) THEN
+          ALTER TABLE vulnerabilities ADD COLUMN epss_score NUMERIC(6,5);
+        END IF;
+      END
+      $$;
+    `);
+
+    await client.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'vulnerabilities' AND column_name = 'epss_percentile'
+        ) THEN
+          ALTER TABLE vulnerabilities ADD COLUMN epss_percentile INTEGER;
+        END IF;
+      END
+      $$;
+    `);
+
+    // --- KEV columns ---
+    await client.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'vulnerabilities' AND column_name = 'is_kev'
+        ) THEN
+          ALTER TABLE vulnerabilities ADD COLUMN is_kev BOOLEAN NOT NULL DEFAULT false;
+        END IF;
+      END
+      $$;
+    `);
+
+    await client.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'vulnerabilities' AND column_name = 'kev_date_added'
+        ) THEN
+          ALTER TABLE vulnerabilities ADD COLUMN kev_date_added DATE;
+        END IF;
+      END
+      $$;
+    `);
+
+    // --- AI Risk Intel columns ---
+    await client.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'vulnerabilities' AND column_name = 'ai_risk_intel'
+        ) THEN
+          ALTER TABLE vulnerabilities ADD COLUMN ai_risk_intel JSONB;
+        END IF;
+      END
+      $$;
+    `);
+
+    await client.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'vulnerabilities' AND column_name = 'ai_risk_intel_at'
+        ) THEN
+          ALTER TABLE vulnerabilities ADD COLUMN ai_risk_intel_at TIMESTAMP;
+        END IF;
+      END
+      $$;
+    `);
+
+    // --- KEV cache table ---
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS kev_cache (
+        id         SERIAL PRIMARY KEY,
+        data       JSONB    NOT NULL,
+        fetched_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
     console.log('Database tables initialized');
   } finally {
     client.release();
