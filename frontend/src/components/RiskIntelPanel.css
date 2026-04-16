@@ -53,6 +53,26 @@
 .skel-label        { height: 9px;  width: 120px; }
 .skel-btn          { height: 24px; width: 76px; border-radius: var(--radius); }
 
+/* Section headers are real text even during streaming */
+.risk-skeleton .risk-skeleton-section h3 {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: 0 0 0.4rem;
+}
+
+/* Fade-in when a skeleton block is replaced with real content */
+@keyframes reveal {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.risk-reveal {
+  animation: reveal 0.25s ease-out both;
+}
+
 .risk-skeleton-composite {
   display: flex;
   align-items: flex-start;
@@ -83,8 +103,6 @@
   flex-direction: column;
   gap: 0.4rem;
 }
-
-.skel-section-label { height: 8px; width: 130px; margin-bottom: 0.25rem; }
 
 .risk-skeleton-cards {
   display: flex;
