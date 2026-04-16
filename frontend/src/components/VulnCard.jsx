@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import SeverityBadge from './SeverityBadge';
 import StatusBadge from './StatusBadge';
 import EpssBadge from './EpssBadge';
+import KevBadge from './KevBadge';
 import './VulnCard.css';
 
 function VulnCard({ vuln }) {
@@ -33,6 +34,10 @@ function VulnCard({ vuln }) {
           score={vuln.epss_score != null ? parseFloat(vuln.epss_score) : null}
           percentile={vuln.epss_percentile}
         />
+      </span>
+
+      <span className="col-kev">
+        <KevBadge isKev={vuln.is_kev} dateAdded={vuln.kev_date_added} />
       </span>
 
       <span className="col-status">

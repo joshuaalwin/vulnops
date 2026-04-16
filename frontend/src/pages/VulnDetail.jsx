@@ -4,6 +4,7 @@ import SeverityBadge from '../components/SeverityBadge';
 import StatusBadge from '../components/StatusBadge';
 import NoteSection from '../components/NoteSection';
 import EpssBadge from '../components/EpssBadge';
+import KevBadge from '../components/KevBadge';
 import './VulnDetail.css';
 
 function VulnDetail() {
@@ -75,6 +76,7 @@ function VulnDetail() {
                 percentile={vuln.epss_percentile}
               />
             )}
+            <KevBadge isKev={vuln.is_kev} dateAdded={vuln.kev_date_added} />
           </div>
         </div>
         <div className="detail-actions">
