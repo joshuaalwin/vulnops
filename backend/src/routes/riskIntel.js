@@ -111,6 +111,11 @@ function validateOutput(raw, vuln) {
   return parsed;
 }
 
+// Write an SSE event to the response
+function sseWrite(res, payload) {
+  res.write(`data: ${JSON.stringify(payload)}\n\n`);
+}
+
 module.exports = function riskIntelRouter(aiLimiter) {
   const router = express.Router();
   const client = new Anthropic();
@@ -133,7 +138,7 @@ module.exports = function riskIntelRouter(aiLimiter) {
       return res.status(500).json({ error: 'Database error' });
     }
 
-    // Cache check (skip if forceRefresh)
+    // Cache hit — return plain JSON immediately (fast path)
     if (!forceRefresh && vuln.ai_risk_intel && vuln.ai_risk_intel_at) {
       const ageMs = Date.now() - new Date(vuln.ai_risk_intel_at).getTime();
       if (ageMs < CACHE_TTL_DAYS * 24 * 60 * 60 * 1000) {
@@ -141,19 +146,32 @@ module.exports = function riskIntelRouter(aiLimiter) {
       }
     }
 
-    // Build and call Claude
-    let rawOutput;
+    // Stream new generation via SSE
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx proxy buffering
+
+    let rawOutput = '';
+
     try {
-      const message = await client.messages.create({
+      const stream = client.messages.stream({
         model: 'claude-sonnet-4-6',
-        max_tokens: 2048,
-        system: SYSTEM_PROMPT,
+        max_tokens: 1024,
+        // Prompt caching: stable system prompt is cached after first use (~0.1x input cost on cache reads)
+        system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
         messages: [{ role: 'user', content: buildUserMessage(vuln) }],
       });
-      rawOutput = message.content[0]?.text ?? '';
+
+      for await (const event of stream) {
+        if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
+          rawOutput += event.delta.text;
+          sseWrite(res, { type: 'chunk', text: event.delta.text });
+        }
+      }
     } catch (err) {
       console.error(`[RiskIntel] Claude API error for vuln ${vulnId}:`, err.message);
-      return res.status(502).json({ error: 'AI synthesis failed — try again shortly' });
+      sseWrite(res, { type: 'error', error: 'AI synthesis failed — try again shortly' });
+      return res.end();
     }
 
     // Validate output
@@ -162,7 +180,8 @@ module.exports = function riskIntelRouter(aiLimiter) {
       parsed = validateOutput(rawOutput, vuln);
     } catch (validationErr) {
       console.error(`[RiskIntel] Validation failed for vuln ${vulnId}:`, validationErr.message, '| Raw (first 200):', rawOutput.slice(0, 200));
-      return res.status(502).json({ error: 'AI response failed validation — try again' });
+      sseWrite(res, { type: 'error', error: 'AI response failed validation — try again' });
+      return res.end();
     }
 
     // Cache to DB
@@ -173,10 +192,11 @@ module.exports = function riskIntelRouter(aiLimiter) {
       );
     } catch (err) {
       console.error(`[RiskIntel] Cache write failed for vuln ${vulnId}:`, err.message);
-      // Non-fatal: still return the result
+      // Non-fatal
     }
 
-    res.json({ ...parsed, cached: false, cached_at: new Date().toISOString() });
+    sseWrite(res, { type: 'done', data: { ...parsed, cached: false, cached_at: new Date().toISOString() } });
+    res.end();
   });
 
   return router;

@@ -21,6 +21,34 @@
   min-height: 56px;
 }
 
+.risk-intel-streaming {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.risk-stream-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.risk-stream-preview {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.65rem 0.8rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 220px;
+  overflow-y: auto;
+  line-height: 1.55;
+  opacity: 0.8;
+}
+
 .risk-intel-error {
   display: flex;
   align-items: center;

@@ -41,20 +41,62 @@ function RiskIntelPanel({ vulnId, initialData }) {
   const [state, setState] = useState(initialData ? 'loaded' : 'idle');
   const [data, setData] = useState(initialData || null);
   const [error, setError] = useState('');
+  const [streamText, setStreamText] = useState('');
 
   async function generate(forceRefresh = false) {
     setState('loading');
     setError('');
+    setStreamText('');
+
     try {
       const url = `/api/risk-intel/${vulnId}${forceRefresh ? '?refresh=1' : ''}`;
       const res = await fetch(url);
+
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || `HTTP ${res.status}`);
       }
-      const json = await res.json();
-      setData(json);
-      setState('loaded');
+
+      const contentType = res.headers.get('content-type') || '';
+
+      // Cache hit returns plain JSON
+      if (contentType.includes('application/json')) {
+        const json = await res.json();
+        setData(json);
+        setState('loaded');
+        return;
+      }
+
+      // New generation comes back as SSE — stream chunks into preview, then finalize
+      setState('streaming');
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop(); // hold incomplete line for next chunk
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          let payload;
+          try { payload = JSON.parse(line.slice(6)); } catch { continue; }
+
+          if (payload.type === 'chunk') {
+            setStreamText(prev => prev + payload.text);
+          } else if (payload.type === 'done') {
+            setData(payload.data);
+            setStreamText('');
+            setState('loaded');
+          } else if (payload.type === 'error') {
+            throw new Error(payload.error);
+          }
+        }
+      }
     } catch (err) {
       setError(err.message);
       setState('error');
@@ -76,7 +118,21 @@ function RiskIntelPanel({ vulnId, initialData }) {
     return (
       <div className="risk-intel-panel risk-intel-loading">
         <span className="risk-spinner" />
-        <span className="risk-loading-text">Analyzing with Claude…</span>
+        <span className="risk-loading-text">Connecting to Claude…</span>
+      </div>
+    );
+  }
+
+  if (state === 'streaming') {
+    return (
+      <div className="risk-intel-panel risk-intel-streaming">
+        <div className="risk-stream-header">
+          <span className="risk-spinner" />
+          <span className="risk-loading-text">Analyzing with Claude…</span>
+        </div>
+        {streamText && (
+          <pre className="risk-stream-preview">{streamText}</pre>
+        )}
       </div>
     );
   }
