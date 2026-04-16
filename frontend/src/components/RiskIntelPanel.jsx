@@ -1,6 +1,17 @@
 import { useState } from 'react';
 import './RiskIntelPanel.css';
 
+// Split "1) Foo 2) Bar 3) Baz" into bullet list items
+function RecommendedAction({ text }) {
+  const items = text.split(/\d+\)/).map(s => s.trim()).filter(Boolean);
+  if (items.length <= 1) return <p className="risk-action-text">{text}</p>;
+  return (
+    <ul className="risk-action-list">
+      {items.map((item, i) => <li key={i}>{item}</li>)}
+    </ul>
+  );
+}
+
 const SCORE_CLASS = {
   CRITICAL: 'risk-critical',
   HIGH: 'risk-high',
@@ -102,13 +113,13 @@ function RiskIntelPanel({ vulnId, initialData }) {
 
       <div className="risk-section">
         <h3>Recommended Action</h3>
-        <p>{data.recommended_action}</p>
+        <RecommendedAction text={data.recommended_action} />
       </div>
 
       <div className="risk-intel-footer">
         <span>AI-generated · Verify before action · Human review required</span>
         {cachedAt && <span>Cached {cachedAt}</span>}
-        <span>Claude Opus 4.6</span>
+        <span>Claude Sonnet 4.6</span>
       </div>
     </div>
   );

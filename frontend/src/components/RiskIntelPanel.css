@@ -151,11 +151,26 @@
   margin-bottom: 0.4rem;
 }
 
-.risk-section p {
+.risk-section p,
+.risk-action-text {
   font-size: 0.86rem;
   color: var(--text);
   line-height: 1.65;
   margin: 0;
+}
+
+.risk-action-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.risk-action-list li {
+  font-size: 0.86rem;
+  color: var(--text);
+  line-height: 1.6;
 }
 
 /* ── Compliance grid ── */
