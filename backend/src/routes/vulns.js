@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../db');
 const { enrichFromNvd } = require('../nvd');
+const { enrichFromEpss } = require('../epss');
 
 const CVE_ID_RE = /^CVE-\d{4}-\d{4,}$/i;
 const VALID_SEVERITIES = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'];
@@ -104,6 +105,7 @@ module.exports = function vulnsRouter(writeLimiter) {
       const created = result.rows[0];
       // Fire-and-forget — does not block the 201 response
       enrichFromNvd(pool, created.id, created.cve_id);
+      enrichFromEpss(pool, created.id, created.cve_id);
       res.status(201).json(created);
     } catch (err) {
       if (err.code === '23505') {
