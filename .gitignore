@@ -24,3 +24,4 @@ terraform/*.tfstate.backup
 
 # Kubernetes secrets — never commit real credentials
 k8s/secrets.yaml
+docs/superpowers/

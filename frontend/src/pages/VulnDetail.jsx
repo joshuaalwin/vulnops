@@ -3,6 +3,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import SeverityBadge from '../components/SeverityBadge';
 import StatusBadge from '../components/StatusBadge';
 import NoteSection from '../components/NoteSection';
+import EpssBadge from '../components/EpssBadge';
+import KevBadge from '../components/KevBadge';
+import RiskIntelPanel from '../components/RiskIntelPanel';
 import './VulnDetail.css';
 
 function VulnDetail() {
@@ -68,6 +71,13 @@ function VulnDetail() {
             {vuln.nvd_enriched && (
               <span className="nvd-badge" title="Data sourced from NVD">NVD Verified</span>
             )}
+            {vuln.epss_score != null && (
+              <EpssBadge
+                score={parseFloat(vuln.epss_score)}
+                percentile={vuln.epss_percentile}
+              />
+            )}
+            <KevBadge isKev={vuln.is_kev} dateAdded={vuln.kev_date_added} />
           </div>
         </div>
         <div className="detail-actions">
@@ -84,6 +94,11 @@ function VulnDetail() {
             <h2>Description</h2>
             <p>{vuln.description}</p>
           </section>
+          <RiskIntelPanel
+            vulnId={vuln.id}
+            initialData={vuln.ai_risk_intel || null}
+          />
+
           <NoteSection
             vulnId={vuln.id}
             notes={notes}

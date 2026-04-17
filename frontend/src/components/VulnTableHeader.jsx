@@ -7,6 +7,8 @@ function VulnTableHeader() {
       <span className="col-title">Title / Product</span>
       <span className="col-severity">Severity</span>
       <span className="col-cvss">CVSS</span>
+      <span className="col-epss">EPSS</span>
+      <span className="col-kev">KEV</span>
       <span className="col-status">Status</span>
       <span className="col-date">Reported</span>
       <span className="col-notes">Notes</span>
