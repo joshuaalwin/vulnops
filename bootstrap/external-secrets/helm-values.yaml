@@ -1,0 +1,71 @@
+# External Secrets Operator — Helm values
+#
+# Install via:
+#   helm repo add external-secrets https://charts.external-secrets.io
+#   helm repo update
+#   helm install external-secrets external-secrets/external-secrets \
+#     --namespace external-secrets \
+#     --create-namespace \
+#     --values bootstrap/external-secrets/helm-values.yaml
+#
+# ESO uses the service account `external-secrets` (default), which
+# matches the namespace/SA pair bound in the Pod Identity association
+# declared in terraform/pod-identity.tf.
+
+# Install the CRDs through the chart — otherwise the ClusterSecretStore
+# / ExternalSecret manifests applied below fail with "no matches for kind".
+installCRDs: true
+
+# Do not mount an AWS-SDK-visible credentials file — authentication is
+# entirely via Pod Identity Agent, which intercepts SDK calls transparently.
+# This ensures the pod cannot fall back to any ambient credential.
+serviceAccount:
+  create: true
+  name: external-secrets
+  # Explicitly no annotations — IRSA's eks.amazonaws.com/role-arn
+  # annotation is NOT set because we use Pod Identity, not IRSA.
+  # The absence of this annotation is intentional.
+  annotations: {}
+
+# Security posture defaults
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 65534
+  seccompProfile:
+    type: RuntimeDefault
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65534
+
+# Resource requests — ESO is lightweight; one replica is sufficient for
+# a single ExternalSecret. Scale up only if adding many ExternalSecrets.
+replicaCount: 1
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    cpu: 100m
+    memory: 128Mi
+
+# Webhook + cert-controller inherit same posture
+webhook:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+
+certController:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
