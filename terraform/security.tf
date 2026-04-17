@@ -59,6 +59,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "security_logs" {
     id     = "security-logs-lifecycle"
     status = "Enabled"
 
+    filter {} # applies to all objects in the bucket
+
     transition {
       days          = 30
       storage_class = "STANDARD_IA"
