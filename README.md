@@ -188,12 +188,25 @@ Frontend at `http://localhost:5173`. API at `http://localhost:5000`.
 
 **Prerequisites:** AWS CLI configured with appropriate IAM permissions, Terraform >= 1.5, kubectl, Helm 3.
 
+**0. Bootstrap Terraform backend (first time only):**
+
+Terraform stores its state in an S3 bucket and uses DynamoDB to prevent concurrent writes. These need to exist before `terraform init` can run, and they sit outside the stack on purpose — they should survive every `terraform destroy`. Run the bootstrap script once:
+
+```bash
+chmod +x scripts/bootstrap-state.sh
+./scripts/bootstrap-state.sh
+```
+
+This creates `vulnops-terraform-state` (versioned, AES256 encrypted, public access blocked) and `vulnops-tf-lock` (pay-per-request DynamoDB table). Combined cost at this scale is less than $0.01/month. Do not destroy them.
+
 **1. Provision infrastructure:**
 
 ```bash
 cd terraform
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars and set alert_email to your address
 terraform init
-terraform apply
+terraform apply -var-file=terraform.tfvars
 ```
 
 **2. Configure kubectl:**
@@ -258,7 +271,20 @@ cd terraform
 terraform destroy
 ```
 
-This removes the EKS cluster, VPC, NAT gateway, S3 buckets (including the security logs bucket), CloudTrail trail, VPC Flow Logs, IAM Access Analyzer, and the DynamoDB state lock table.
+This removes the EKS cluster, VPC, NAT gateway, security logs S3 bucket, CloudTrail trail, VPC Flow Logs, and IAM Access Analyzer. The Terraform state bucket and DynamoDB lock table are not touched — they need to persist across destroy cycles.
+
+One thing to watch: if CloudTrail has been running for any length of time, it will have written log files to the security logs bucket. Terraform cannot delete a non-empty versioned bucket and will error at the end of destroy. Empty it first:
+
+```bash
+python3 -c "
+import boto3
+account = boto3.client('sts').get_caller_identity()['Account']
+bucket = boto3.resource('s3').Bucket(f'vulnops-security-logs-{account}')
+bucket.object_versions.delete()
+"
+```
+
+Then re-run `terraform destroy` to finish cleanup.
 
 ---
 
