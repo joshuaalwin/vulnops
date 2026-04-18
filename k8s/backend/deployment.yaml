@@ -69,6 +69,8 @@ spec:
                 secretKeyRef:
                   name: vulnops-db-secret
                   key: POSTGRES_DB
+            - name: ALLOWED_ORIGINS
+              value: "http://k8s-vulnops-vulnopsf-e9b4b86f6b-16c9d7ce998825ca.elb.us-east-1.amazonaws.com"
           resources:
             requests:
               cpu: "100m"
