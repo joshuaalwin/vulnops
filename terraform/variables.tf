@@ -27,3 +27,20 @@ variable "vpc_cidr" {
   type        = string
   default     = "10.0.0.0/16"
 }
+
+variable "alert_email" {
+  description = "Email address for cost and TTL alert notifications"
+  type        = string
+}
+
+variable "monthly_budget_usd" {
+  description = "Monthly spend threshold in USD — alert fires when actual spend exceeds this"
+  type        = number
+  default     = 10
+}
+
+variable "cluster_ttl_minutes" {
+  description = "Alert if the EKS cluster has been running longer than this many minutes"
+  type        = number
+  default     = 30
+}

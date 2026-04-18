@@ -1,0 +1,10 @@
+aws_region          = "us-east-1"
+environment         = "dev"
+cluster_name        = "vulnops-eks"
+cluster_version     = "1.32"
+vpc_cidr            = "10.0.0.0/16"
+
+# Cost guard — copy this file to terraform.tfvars and fill in your email
+alert_email         = "you@example.com"
+monthly_budget_usd  = 10   # alert when monthly spend exceeds $10
+cluster_ttl_minutes = 30   # alert if EKS cluster is still running after 30 minutes
