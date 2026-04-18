@@ -6,7 +6,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce       # EBS volumes attach to one node at a time
-  storageClassName: gp3   # SSD-backed EBS, provisioned by EKS Auto Mode
+  storageClassName: ebs-csi-gp2   # CSI-backed EBS storage class
   resources:
     requests:
       storage: 5Gi
