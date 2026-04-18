@@ -33,6 +33,12 @@ kubectl wait --for=condition=available --timeout=120s deployment/argocd-server -
 echo "Deploying application..."
 kubectl apply -f k8s/argocd/application.yaml
 
+echo "Waiting for ArgoCD initial sync..."
+until kubectl get application vulnops -n argocd \
+  -o jsonpath='{.status.sync.status}' 2>/dev/null | grep -q "Synced"; do
+  sleep 5
+done
+
 echo "Waiting for NLB hostname..."
 NLB_HOST=""
 while [ -z "$NLB_HOST" ]; do
