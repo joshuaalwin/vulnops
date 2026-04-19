@@ -44,7 +44,7 @@ spec:
               drop: [ALL]
       containers:
         - name: backend
-          image: ghcr.io/joshuaalwin/vulnops-backend:9c27fbf
+          image: ghcr.io/joshuaalwin/vulnops-backend:d69e95b
           ports:
             - containerPort: 5000
           env:

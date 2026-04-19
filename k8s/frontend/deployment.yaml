@@ -24,7 +24,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: frontend
-          image: ghcr.io/joshuaalwin/vulnops-frontend:9c27fbf
+          image: ghcr.io/joshuaalwin/vulnops-frontend:d69e95b
           ports:
             - containerPort: 8080
           resources:
