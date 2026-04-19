@@ -234,44 +234,23 @@ From this point forward, any push to `main` that updates the image tags in the m
 
 ---
 
-### Manual cluster setup
+### Verifying the deployment
 
-If you prefer to run the bootstrap steps by hand rather than using the script:
+Once the bootstrap script completes and pods are running:
 
 ```bash
-# Install External Secrets Operator
-helm repo add external-secrets https://charts.external-secrets.io
-helm repo update
-helm upgrade --install external-secrets external-secrets/external-secrets \
-  --namespace external-secrets --create-namespace \
-  --values bootstrap/external-secrets/helm-values.yaml --wait
+# All 5 pods should be Running
+kubectl get pods -n vulnops
 
-# Configure ESO to pull from AWS Secrets Manager
-kubectl apply -f bootstrap/external-secrets/cluster-secret-store.yaml
-kubectl create namespace vulnops --dry-run=client -o yaml | kubectl apply -f -
-kubectl apply -f bootstrap/external-secrets/external-secret.yaml
+# Database secret synced from Secrets Manager (not from git)
+kubectl get externalsecret -n vulnops
 
-# Verify the database secret was materialized
-kubectl get externalsecret -n vulnops vulnops-db-secret
-kubectl get secret -n vulnops vulnops-db-secret -o jsonpath='{.data}' | jq 'keys'
-# ["POSTGRES_DB","POSTGRES_PASSWORD","POSTGRES_USER"]
-
-# Confirm Pod Identity is the auth path (no IRSA annotation on the ESO service account)
-kubectl get sa -n external-secrets external-secrets -o yaml \
-  | grep "eks.amazonaws.com/role-arn" || echo "OK — Pod Identity confirmed"
-
-# Install ArgoCD
-kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
-kubectl apply -n argocd \
-  -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-kubectl wait --for=condition=available --timeout=120s deployment/argocd-server -n argocd
-
-# Deploy the application
-kubectl apply -f k8s/argocd/application.yaml
-kubectl get pods -n vulnops -w
+# ESO has no AWS credentials — Pod Identity is the auth path
+kubectl get sa external-secrets -n external-secrets -o yaml | grep role-arn
+# → no output confirms Pod Identity, not IRSA
 ```
 
-See `bootstrap/external-secrets/README.md` for ESO verification steps and rotation instructions.
+See `bootstrap/external-secrets/README.md` for ESO verification steps and secret rotation instructions.
 
 ---
 
