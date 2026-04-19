@@ -36,3 +36,7 @@ scripts/assets/
 
 # PNGs live on the GitHub release (tag: static-assets), not in the repo
 *.png
+
+# Banner/logo SVGs also live on the GitHub release
+/VulnOps-Logo.svg
+/Vulnops-banner.svg
