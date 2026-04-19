@@ -215,37 +215,63 @@ terraform apply -var-file=terraform.tfvars
 aws eks update-kubeconfig --region us-east-1 --name vulnops-eks
 ```
 
-**3. Install ArgoCD:**
+**3. Bootstrap cluster tooling:**
+
+This installs the External Secrets Operator (which pulls the database credentials from AWS Secrets Manager), waits for the secret to sync, installs ArgoCD, deploys the application, and automatically injects the live NLB hostname into the backend's CORS allowlist.
 
 ```bash
-kubectl create namespace argocd
-kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+chmod +x scripts/bootstrap-cluster.sh
+./scripts/bootstrap-cluster.sh
+```
 
-# Wait for ArgoCD to be ready
+The script prints the frontend URL when it finishes. No manual URL lookup needed.
+
+**4. Confirm the SNS alert subscription:**
+
+AWS sends a confirmation email to the address in `terraform.tfvars` immediately after apply. Click the confirmation link or the cost and TTL alerts will not deliver.
+
+From this point forward, any push to `main` that updates the image tags in the manifests triggers a deployment automatically via ArgoCD.
+
+---
+
+### Manual cluster setup
+
+If you prefer to run the bootstrap steps by hand rather than using the script:
+
+```bash
+# Install External Secrets Operator
+helm repo add external-secrets https://charts.external-secrets.io
+helm repo update
+helm upgrade --install external-secrets external-secrets/external-secrets \
+  --namespace external-secrets --create-namespace \
+  --values bootstrap/external-secrets/helm-values.yaml --wait
+
+# Configure ESO to pull from AWS Secrets Manager
+kubectl apply -f bootstrap/external-secrets/cluster-secret-store.yaml
+kubectl create namespace vulnops --dry-run=client -o yaml | kubectl apply -f -
+kubectl apply -f bootstrap/external-secrets/external-secret.yaml
+
+# Verify the database secret was materialized
+kubectl get externalsecret -n vulnops vulnops-db-secret
+kubectl get secret -n vulnops vulnops-db-secret -o jsonpath='{.data}' | jq 'keys'
+# ["POSTGRES_DB","POSTGRES_PASSWORD","POSTGRES_USER"]
+
+# Confirm Pod Identity is the auth path (no IRSA annotation on the ESO service account)
+kubectl get sa -n external-secrets external-secrets -o yaml \
+  | grep "eks.amazonaws.com/role-arn" || echo "OK — Pod Identity confirmed"
+
+# Install ArgoCD
+kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
+kubectl apply -n argocd \
+  -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 kubectl wait --for=condition=available --timeout=120s deployment/argocd-server -n argocd
-```
 
-**4. Create the database secret:**
-
-```bash
-cp k8s/secrets.yaml.example k8s/secrets.yaml
-# Edit k8s/secrets.yaml with base64-encoded credentials, then:
-kubectl apply -f k8s/secrets.yaml
-```
-
-**5. Apply the ArgoCD application:**
-
-```bash
+# Deploy the application
 kubectl apply -f k8s/argocd/application.yaml
+kubectl get pods -n vulnops -w
 ```
 
-ArgoCD syncs the `k8s/` directory and deploys all three tiers. From this point forward, any push to `main` that updates the image tags in the manifests triggers a deployment automatically.
-
-**6. Get the frontend URL:**
-
-```bash
-kubectl get svc -n vulnops vulnops-frontend -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
-```
+See `bootstrap/external-secrets/README.md` for ESO verification steps and rotation instructions.
 
 ---
 
@@ -268,23 +294,12 @@ kubectl delete namespace argocd
 
 ```bash
 cd terraform
-terraform destroy
+terraform destroy -var-file=terraform.tfvars
 ```
 
-This removes the EKS cluster, VPC, NAT gateway, security logs S3 bucket, CloudTrail trail, VPC Flow Logs, and IAM Access Analyzer. The Terraform state bucket and DynamoDB lock table are not touched — they need to persist across destroy cycles.
+This removes the EKS cluster, VPC, NAT gateway, security logs S3 bucket (including all CloudTrail and Flow Log objects), CloudTrail trail, VPC Flow Logs, and IAM Access Analyzer. The Terraform state bucket and DynamoDB lock table are not touched — they persist across destroy cycles by design.
 
-One thing to watch: if CloudTrail has been running for any length of time, it will have written log files to the security logs bucket. Terraform cannot delete a non-empty versioned bucket and will error at the end of destroy. Empty it first:
-
-```bash
-python3 -c "
-import boto3
-account = boto3.client('sts').get_caller_identity()['Account']
-bucket = boto3.resource('s3').Bucket(f'vulnops-security-logs-{account}')
-bucket.object_versions.delete()
-"
-```
-
-Then re-run `terraform destroy` to finish cleanup.
+The security logs bucket has `force_destroy = true` so Terraform empties all versioned objects automatically before deleting. No manual cleanup needed.
 
 ---
 
@@ -302,7 +317,12 @@ VulnOps/
 │   ├── frontend/
 │   ├── network-policies/
 │   └── argocd/
-├── terraform/            # VPC, EKS cluster, and security monitoring
+├── bootstrap/
+│   └── external-secrets/ # ESO install runbook and manifests
+├── terraform/            # VPC, EKS cluster, cost guard, and security monitoring
+├── scripts/
+│   ├── bootstrap-state.sh   # Creates S3 state bucket and DynamoDB lock table
+│   └── bootstrap-cluster.sh # Installs ESO and ArgoCD after terraform apply
 ├── .github/workflows/    # GitHub Actions CI pipeline
 ├── deploy/               # EC2 setup script for manual deployment
 └── docker-compose.yml
