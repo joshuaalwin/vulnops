@@ -42,7 +42,18 @@ kubectl create namespace vulnops --dry-run=client -o yaml | kubectl apply -f -
 # 5. Apply the ExternalSecret. ESO will create/update the vulnops-db-secret
 #    K8s Secret using the credentials pulled from AWS Secrets Manager.
 kubectl apply -f bootstrap/external-secrets/external-secret.yaml
+
+# 6. Apply the AI ExternalSecret. ESO materializes vulnops-ai-secret in
+#    the vulnops namespace for the backend deployment to consume.
+kubectl apply -f bootstrap/external-secrets/ai-external-secret.yaml
 ```
+
+> The Anthropic API key is seeded by `scripts/bootstrap-cluster.sh` — it prompts
+> for the value on first run and writes it to AWS Secrets Manager via
+> `put-secret-value`. The key never enters git, CI, or Terraform state. Re-running
+> is idempotent: if the stored value is no longer the Terraform placeholder, the
+> prompt is skipped. To use a shell-exported key instead of the prompt, run the
+> script with `USE_ENV=1 ANTHROPIC_API_KEY=... ./scripts/bootstrap-cluster.sh`.
 
 ---
 
@@ -62,7 +73,14 @@ kubectl get externalsecret -n vulnops vulnops-db-secret
 kubectl get secret -n vulnops vulnops-db-secret -o jsonpath='{.data}' | jq 'keys'
 # → ["POSTGRES_DB","POSTGRES_PASSWORD","POSTGRES_USER"]
 
-# Backend and postgres pods consume it — rollout to pick up any value change
+# AI ExternalSecret synced (expect Ready=True)
+kubectl get externalsecret -n vulnops vulnops-ai-secret
+
+# Materialized AI Secret
+kubectl get secret -n vulnops vulnops-ai-secret -o jsonpath='{.data}' | jq 'keys'
+# → ["ANTHROPIC_API_KEY"]
+
+# Backend and postgres pods consume these — rollout to pick up any value change
 kubectl rollout restart deployment/vulnops-postgres -n vulnops
 kubectl rollout restart deployment/vulnops-backend -n vulnops
 ```
@@ -93,9 +111,16 @@ aws eks list-pod-identity-associations \
 Rotate the secret in AWS:
 
 ```bash
+# DB credentials
 aws secretsmanager put-secret-value \
   --secret-id vulnops/db-credentials \
   --secret-string '{"POSTGRES_USER":"vulnops","POSTGRES_PASSWORD":"<new-value>","POSTGRES_DB":"vulnops"}' \
+  --region us-east-1
+
+# Anthropic API key
+aws secretsmanager put-secret-value \
+  --secret-id vulnops/ai-credentials \
+  --secret-string '{"ANTHROPIC_API_KEY":"<new-value>"}' \
   --region us-east-1
 ```
 
