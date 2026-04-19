@@ -11,15 +11,26 @@ spec:
 
   source:
     repoURL: https://github.com/joshuaalwin/vulnops.git
-    targetRevision: main
+    targetRevision: feat/pod-identity-eso
     path: k8s
     # Exclude the argocd/ subdirectory itself to avoid ArgoCD trying to manage its own Application
     directory:
+      recurse: true
       exclude: "argocd/**"
 
   destination:
     server: https://kubernetes.default.svc  # The cluster ArgoCD is running in
     namespace: vulnops
+
+  # ALLOWED_ORIGINS is injected by bootstrap-cluster.sh after the NLB hostname is known.
+  # ArgoCD must not revert it — the value changes every deploy as the NLB hostname is dynamic.
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      name: vulnops-backend
+      namespace: vulnops
+      jqPathExpressions:
+        - '.spec.template.spec.containers[].env[] | select(.name == "ALLOWED_ORIGINS")'
 
   syncPolicy:
     automated:

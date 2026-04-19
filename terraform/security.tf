@@ -17,7 +17,8 @@ data "aws_caller_identity" "current" {}
 # ==============================================================
 
 resource "aws_s3_bucket" "security_logs" {
-  bucket = "vulnops-security-logs-${data.aws_caller_identity.current.account_id}"
+  bucket        = "vulnops-security-logs-${data.aws_caller_identity.current.account_id}"
+  force_destroy = true
 }
 
 # Block all public access — audit logs must never be publicly readable
@@ -58,6 +59,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "security_logs" {
   rule {
     id     = "security-logs-lifecycle"
     status = "Enabled"
+
+    filter {} # applies to all objects in the bucket
 
     transition {
       days          = 30

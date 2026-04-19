@@ -17,6 +17,8 @@ learning/
 # Terraform
 terraform/.terraform/
 terraform/tfplan
+terraform/terraform.tfvars
+terraform/*.zip
 terraform.tfstate
 terraform.tfstate.backup
 terraform/*.tfstate
