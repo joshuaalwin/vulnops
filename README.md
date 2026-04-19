@@ -4,75 +4,170 @@
 
 # VulnOps
 
-A CVE registry for tracking and managing vulnerabilities, built as a full-stack DevSecOps project. The application runs on AWS EKS and is deployed through a GitHub Actions CI/CD pipeline with security tooling integrated at every stage.
-
-**Stack:** React + Nginx / Node.js Express / PostgreSQL  
-**Infrastructure:** AWS EKS (Auto Mode) / Terraform / Docker / Kubernetes
-
----
-
-## What it does
-
-VulnOps lets teams submit CVEs with an ID, severity, affected product, CVSS score, description, and remediation status. Each entry supports threaded notes. There is a live CVSS v3.1 calculator on the submission form built on the official FIRST formula.
-
-The application is deliberately simple. The security architecture around it is not: hardened containers, a locked-down Kubernetes deployment, a 10-stage CI pipeline, and AWS account-level monitoring, all provisioned through code.
+> **A DevSecOps reference architecture on AWS EKS** — security controls enforced at every layer, provisioned through Terraform, deployed through a 10-stage GitHub Actions pipeline, and reconciled by ArgoCD with zero long-lived credentials.
 
 <p align="center">
-  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/Vulnops-Dashboard.png" alt="VulnOps dashboard" width="110%"/>
+  <a href="https://github.com/joshuaalwin/vulnops/actions/workflows/ci.yml"><img src="https://github.com/joshuaalwin/vulnops/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/badge/SBOM-attached-10b981" alt="SBOM attached">
+  <img src="https://img.shields.io/badge/Provenance-SLSA-3b82f6" alt="SLSA provenance">
+  <img src="https://img.shields.io/badge/EKS-AutoMode%20%7C%20v1.32-fbbf24" alt="EKS Auto Mode v1.32">
+  <img src="https://img.shields.io/badge/Terraform-%E2%89%A51.5-7c3aed" alt="Terraform">
+  <img src="https://img.shields.io/badge/AI--enriched-Claude-c2410c" alt="AI-enriched with Claude">
 </p>
-<br><br><br>
-<p align="center">
-  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/Vulnops-CVE.png" alt="VulnOps CVE submission form" width="100%"/>
-</p>
-
-The submission form includes a live CVSS v3.1 calculator built on the official FIRST formula. Scores update in real time as attack vector, complexity, privileges, and impact metrics are selected.
 
 ---
 
 ## Architecture
 
+<p align="center">
+  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/VulnOps-Architecture.png" alt="VulnOps architecture" width="100%"/>
+</p>
+
+VulnOps is a 3-tier CVE registry (React + Express + PostgreSQL) running on AWS EKS. The application is deliberately simple. The security architecture around it — pod hardening, network segmentation, secrets lifecycle, supply chain attestation, audit trail — is the point of the project.
+
+---
+
+## What this demonstrates
+
+| Domain | Controls |
+|---|---|
+| **Identity & access** | EKS Pod Identity (no IRSA, no static keys); GitHub Actions → AWS via OIDC federation; IAM Access Analyzer monitoring cross-account exposure |
+| **Network isolation** | EKS in private subnets; default-deny NetworkPolicy baseline with explicit per-tier allows; NLB as the only internet ingress |
+| **Secrets management** | External Secrets Operator pulls from AWS Secrets Manager; Kubernetes secrets encrypted at rest via KMS envelope encryption; zero plaintext credentials in git |
+| **Supply chain integrity** | SBOM and SLSA build provenance attached to every image; `npm install --ignore-scripts`; nginx pinned to SHA256 digest; commit-SHA image tags only |
+| **Runtime hardening** | `runAsNonRoot`, `readOnlyRootFilesystem`, `drop: [ALL]` capabilities, `automountServiceAccountToken: false`, Pod Security Standards enforcement |
+| **Audit & detection** | Multi-region CloudTrail with log-file validation; VPC Flow Logs to S3 with custom format; encrypted log bucket with 90-day lifecycle; five EKS control-plane log types enabled |
+| **Threat intel & AI** | Auto-enrichment from NVD (CVSS), FIRST EPSS (exploit prediction), and CISA KEV (known-exploited); Claude-generated risk rationale with prompt caching |
+
+---
+
+## Walkthrough
+
+> **Video walkthrough — coming soon.** A 2-minute screen recording will land here once recorded.
+
+In the meantime, every security control is independently verifiable from the command line. See [`walkthrough.md`](walkthrough.md) for the full 7-section proof script. A taste:
+
+```bash
+# Pods run as non-root with zero Linux capabilities
+kubectl exec -n vulnops deploy/vulnops-backend -- cat /proc/1/status | grep CapEff
+# → CapEff: 0000000000000000
+
+# ESO service account has NO AWS credentials — Pod Identity is the auth path
+kubectl get sa external-secrets -n external-secrets -o yaml | grep role-arn
+# → no output confirms Pod Identity, not IRSA
+
+# IAM Access Analyzer — zero findings means nothing exposed outside the account
+aws accessanalyzer list-findings \
+  --analyzer-arn arn:aws:access-analyzer:us-east-1:ACCOUNT:analyzer/vulnops-access-analyzer
+
+# CloudTrail log-file validation chain is intact
+aws cloudtrail validate-logs --trail-arn arn:aws:cloudtrail:us-east-1:ACCOUNT:trail/vulnops \
+  --start-time $(date -u -d '1 hour ago' +%FT%TZ)
 ```
-Internet -> AWS NLB -> nginx (port 8080, non-root)
-                    -> React SPA (static assets)
-                    -> Express API (port 5000, ClusterIP) -> PostgreSQL (port 5432, ClusterIP)
+
+Each command in `walkthrough.md` is annotated with the expected output, so a reviewer can run it against a live cluster and verify posture directly.
+
+---
+
+## Threat intelligence & AI
+
+Every submitted CVE is asynchronously enriched from authoritative sources, then run through a Claude-generated risk rationale. The application turns a bare CVE ID into a prioritized, context-aware record without manual lookup.
+
+### Enrichment pipeline
+
+| Source | What it adds | Cache |
+|---|---|---|
+| **NVD (NIST)** | Official CVSS v3.1 vector + base score, weakness enumeration (CWE), vulnerable product range, authoritative description. Backfilled if the user submits only an ID. | per-CVE, refreshed on miss |
+| **FIRST EPSS** | Exploit Prediction Scoring System — probability (0–1) that the CVE will be exploited in the next 30 days, ranked against the global EPSS distribution. | 24h |
+| **CISA KEV** | Binary flag: is this CVE in the Known Exploited Vulnerabilities catalog? Drives prioritization — a low-CVSS CVE with active exploitation outranks a high-CVSS CVE with none. | 24h catalog refresh |
+
+Enrichment is fire-and-forget from the user's perspective. A CVE submitted without CVSS comes back with full NVD metadata, EPSS score, and KEV status on the next page refresh.
+
+### AI risk rationale
+
+Each record gets a structured risk assessment generated by the **Anthropic Claude API** (streaming response). The rationale is grounded in the enriched data — CVSS vector, EPSS percentile, KEV status — and reasons about:
+
+- **Exploitability** — what access and preconditions an attacker needs
+- **Blast radius** — what a successful exploit unlocks (data exposure, lateral movement, RCE)
+- **Prioritization** — where this CVE should sit in the remediation queue relative to the rest of the backlog
+- **Remediation posture** — whether a patch, mitigation, or compensating control is the right next step
+
+Implementation detail:
+
+- **Streaming responses** via the Anthropic SDK — rationale renders incrementally as tokens arrive, no spinner-staring
+- **Prompt caching** on the enrichment context (system prompt + scoring rubric) — repeated scoring calls hit the cache, cutting cost and latency
+- **7-day result cache** keyed on `(cve_id, enrichment_hash)` — identical inputs don't re-spend tokens
+- **Score rationale cap** at 1500 characters — enforced in validation, prevents runaway generation
+- **Grounding check** — the response is validated to reference the source data, not hallucinate CVE details
+
+### Why this matters
+
+A CVE registry that just stores IDs is a spreadsheet. The enrichment + AI layer turns it into a triage tool:
+
+- **NVD** tells you the technical shape of the vulnerability
+- **EPSS** tells you how likely it is to be exploited in practice
+- **KEV** tells you if it's actively being exploited *right now*
+- **Claude** synthesizes all three into a decision — patch now, patch soon, or accept the risk
+
+This is the same data model a production vulnerability management platform uses. Built on public APIs and one LLM call.
+
+---
+
+## Security architecture
+
+### 1. Identity & access
+
+EKS Pod Identity associations bind IAM roles to Kubernetes service accounts without OIDC provider annotations. External Secrets Operator and the EBS CSI driver authenticate to AWS through Pod Identity — no IRSA role-arn annotations, no long-lived access keys anywhere on the cluster.
+
+GitHub Actions authenticates to AWS through OIDC federation. The CI job exchanges a short-lived GitHub-signed token for AWS credentials scoped per workflow. No PATs, no `AWS_ACCESS_KEY_ID` stored as a repo secret.
+
+IAM Access Analyzer runs at account scope and continuously flags resources with policies that grant access from outside the AWS account. Zero findings is the steady state.
+
+### 2. Network isolation
+
+Three availability zones. Public subnets hold only the NAT gateway and the NLB; everything else — EKS nodes, RDS, the PostgreSQL StatefulSet — sits in private subnets with egress through NAT.
+
+```
+Internet → NLB (public subnet) → nginx pods (8080, non-root)
+                              → React SPA (static assets)
+                              → Express API (5000, ClusterIP) → PostgreSQL (5432, ClusterIP)
 ```
 
-The backend and database are ClusterIP services with no external load balancer and no public endpoint. Only the frontend NLB is internet-facing. All three tiers run in Kubernetes on EKS. Cluster nodes sit in private subnets with a NAT gateway for outbound traffic only.
+The backend and database are ClusterIP services with no external load balancer and no public endpoint. Only the frontend NLB is internet-facing.
 
----
+NetworkPolicies start with a default-deny baseline in the `vulnops` namespace. Explicit allows cover only the required paths: frontend → backend on port 5000, backend → PostgreSQL on port 5432. Lateral movement from a compromised frontend pod toward the database is blocked at the network layer.
 
-## Infrastructure
+### 3. Secrets management
 
-Provisioned entirely with Terraform using official AWS modules.
+External Secrets Operator (ESO) pulls database credentials from AWS Secrets Manager and materializes them as a Kubernetes secret in the `vulnops` namespace. The `ClusterSecretStore` is scoped to a single secret ARN — no wildcards.
 
-**VPC:** Three availability zones. EKS nodes in private subnets. Public subnets hold only the NAT gateway and the NLB.
+Kubernetes secrets are encrypted at rest using AWS KMS envelope encryption (configured on the EKS cluster). `k8s/secrets.yaml` is gitignored; only `secrets.yaml.example` is tracked.
 
-**EKS Auto Mode (Kubernetes 1.32):** AWS manages node groups, CoreDNS, and kube-proxy. All five control plane log types are enabled (api, audit, authenticator, controllerManager, scheduler). Kubernetes secrets are encrypted at rest using AWS KMS envelope encryption.
+For rotation, AWS Secrets Manager is the source of truth. Rotating the value there triggers an ESO re-sync on the next reconciliation interval; no manifest change, no redeploy.
 
-**Terraform state:** S3 backend with AES256 encryption and versioning. DynamoDB table for state locking to prevent concurrent apply races.
+### 4. Supply chain integrity
 
-**AWS security monitoring:**
+**Source:**
+- `npm install --ignore-scripts` blocks postinstall-based supply chain attacks (Axios 1.14.1/0.30.4 compromise, April 2025, dropped a RAT via `postinstall`).
+- Gitleaks runs first in CI — no point building if secrets are already exposed.
+- Semgrep SAST runs two passes: the real scan, and an inverted-exit-code gate test against intentionally vulnerable code that fails the build if the ruleset doesn't fire.
 
-- CloudTrail: multi-region trail with log file validation. SHA-256 digest files are generated per delivery, so any deleted or modified log breaks the chain. `include_global_service_events` is enabled because IAM and STS events always log to us-east-1 regardless of where your resources are.
-- VPC Flow Logs: captures all traffic (ACCEPT and REJECT) and ships to S3. A custom log format adds pre-NAT source addresses, TCP flags, subnet ID, and VPC ID for forensic reconstruction. S3 delivery has no ingestion cost; CloudWatch Logs charges $0.50/GB.
-- IAM Access Analyzer (account scope): continuously evaluates resource-based policies and flags anything accessible from outside the AWS account.
-- Security logs bucket: public access fully blocked, AES256 encryption, versioning enabled, 30-day transition to STANDARD_IA, 90-day expiration.
+**Build:**
+- Multi-stage Dockerfiles, Alpine base, non-root user (UID 1000), production dependencies only.
+- Nginx pinned to a SHA256 digest. Tags are mutable; a compromised upstream image under the same tag would be pulled silently. A digest is a cryptographic commitment to exact bytes.
+- The backend build stage intentionally uses an unpinned `node:20-alpine` to carry known CVEs. This gives the Trivy gate something to detect, demonstrating the gate actually works before the base image is upgraded.
 
----
+**Distribute:**
+- Images pushed to GHCR with SBOM and SLSA provenance attestations attached by BuildKit.
+- Images tagged with the 7-character commit SHA. Every running pod is traceable to the exact commit that built it.
+- `GITHUB_TOKEN` handles auth — no stored PATs, no third-party registry dependency.
 
-## Containers
+**Deploy:**
+- ArgoCD reconciles `k8s/` from git with `selfHeal: true`. Manual `kubectl apply` drift is automatically reverted. CI never holds cluster credentials.
 
-Both images use multi-stage builds: Alpine base, non-root user (UID 1000), production dependencies only.
+### 5. Runtime hardening
 
-The nginx production image is pinned to a SHA256 digest rather than a tag. Tags are mutable. A compromised upstream image under the same tag would be pulled silently. A digest is a cryptographic commitment to exact bytes.
-
-The backend build stage intentionally uses an unpinned `node:20-alpine` to carry known CVEs. This gives the Trivy gate in CI something to detect, demonstrating that the gate actually works before the base image is upgraded.
-
----
-
-## Kubernetes hardening
-
-Every pod spec includes a full securityContext:
+Every pod spec enforces:
 
 ```yaml
 securityContext:
@@ -88,82 +183,167 @@ securityContext:
 automountServiceAccountToken: false
 ```
 
-None of the pods need Kubernetes API access. Disabling `automountServiceAccountToken` removes an auto-mounted credential from every pod that has no use for it.
+None of the pods need Kubernetes API access. `automountServiceAccountToken: false` removes an auto-mounted credential from every pod that has no use for it.
 
-NetworkPolicies start with a default-deny baseline. Explicit allows cover only the required paths: frontend to backend on port 5000, backend to PostgreSQL on port 5432. Everything else is blocked at the network layer, including any lateral movement from a compromised frontend pod toward the database.
+The `vulnops` namespace enforces Pod Security Standards at `baseline` with audit and warn set to `restricted`. Not fully restricted only because PostgreSQL `initdb` requires `CAP_CHOWN` to set ownership on its data directory. Frontend and backend pods enforce restricted-equivalent controls through their own pod specs regardless.
 
-The `vulnops` namespace enforces Pod Security Standards at `baseline` with audit and warn set to `restricted`. The namespace is not fully restricted because PostgreSQL `initdb` requires `CAP_CHOWN` to set ownership on its data directory. Frontend and backend pods enforce restricted-equivalent controls through their own securityContexts regardless.
+Application-layer controls on the Express API:
+- `helmet()` adds CSP, `X-Frame-Options`, `Strict-Transport-Security`, and seven other security headers on every response.
+- CORS locked to an explicit `ALLOWED_ORIGINS` allowlist; 403 on disallowed origins.
+- Rate limiting: global (200/15 min) + stricter write limit (30/15 min on POST/PUT/DELETE).
+- Input validation at the API layer — CVE IDs match `CVE-YYYY-NNNNN`, severity/status enum-checked, CVSS score bounded 0–10, field length caps on all text inputs.
 
-ArgoCD runs inside EKS and watches the `k8s/` directory in this repository. `selfHeal: true` means any manual `kubectl apply` drift is automatically reverted. CI never holds cluster credentials.
+### 6. Audit & detection
 
----
+**CloudTrail:** multi-region trail with log file validation. SHA-256 digest files are generated per delivery; any deleted or modified log breaks the chain. `include_global_service_events = true` ensures IAM and STS events (which always log to us-east-1 regardless of your resource region) are captured.
 
-## CI/CD pipeline
+**VPC Flow Logs:** captures all traffic (ACCEPT and REJECT) and ships to S3. Custom format adds pre-NAT source addresses, TCP flags, subnet ID, and VPC ID for forensic reconstruction. S3 delivery is free at ingest; CloudWatch Logs would charge $0.50/GB.
 
-10 stages, triggered on every push and pull request to `main`.
+**EKS control plane logs:** all five types enabled (`api`, `audit`, `authenticator`, `controllerManager`, `scheduler`). Everything that talks to the API server is logged.
 
-| Stage | Tool | What it does |
-|---|---|---|
-| Secret scan | Gitleaks | Full git history scan for credentials and tokens. Runs first. No point building if secrets are already exposed. |
-| Lint | ESLint | Backend and frontend in parallel. |
-| Dependency audit | npm audit | Fails on CRITICAL severity findings in third-party packages. |
-| SAST source scan | Semgrep | Scans `backend/src/` and `frontend/src/` with `p/nodejs`, `p/owasp-top-ten`, and `p/javascript`. Results uploaded to the GitHub Security tab as SARIF. |
-| SAST gate test | Semgrep | Runs `--error` against a fixture of intentionally insecure code. Inverted exit code: if Semgrep finds nothing in the fixture, the build fails. This validates the ruleset fires. A scanner that runs silently and catches nothing is worse than no scanner. |
-| Build + push | Docker Buildx / GHCR | Images tagged with the 7-character commit SHA. `GITHUB_TOKEN` for auth, no stored PATs. SBOM and build provenance attestations are attached automatically via BuildKit. |
-| Image scan | Trivy | Scans for OS and library CVEs across both images. |
-| IaC scan | Checkov | Scans `terraform/` and `k8s/` manifests for misconfigurations. |
-| Dockerfile lint | Hadolint | Fails on errors, warns on warnings. |
-| Manifest update | git | Updates image tags in the backend and frontend deployment manifests. ArgoCD picks up the commit and deploys. |
+**Security logs bucket:** public access fully blocked, AES256 encryption, versioning enabled, 30-day transition to STANDARD_IA, 90-day expiration. `force_destroy = true` so the bucket empties cleanly on `terraform destroy` without a manual cleanup step.
 
-Every running image is traceable to the exact commit that built it. `latest` is mutable and leaves no audit trail.
+**IAM Access Analyzer:** account-scope analyzer continuously evaluates resource-based policies and flags anything accessible from outside the AWS account.
 
 ---
 
-## Security decisions
+## CI/CD security gates
+
+10 stages, triggered on every push and pull request to `main`. A failure in any gate stops the deployment.
+
+| # | Stage | Tool | What it catches |
+|---|---|---|---|
+| 1 | Secret scan | Gitleaks | Credentials and tokens in git history. Runs first — no point building if secrets are already exposed. |
+| 2 | Lint | ESLint | Backend and frontend in parallel. |
+| 3 | Dependency audit | npm audit | Fails on CRITICAL severity findings in third-party packages. |
+| 4 | SAST source scan | Semgrep | Scans with `p/nodejs`, `p/owasp-top-ten`, `p/javascript`. SARIF results uploaded to GitHub Security tab. |
+| 5 | SAST gate test | Semgrep | Runs `--error` against intentionally insecure fixture. Inverted exit code — if Semgrep finds nothing, the build fails. Validates the ruleset actually fires. |
+| 6 | Build + push | Docker Buildx / GHCR | Commit-SHA tagged images with SBOM and SLSA provenance attached. `GITHUB_TOKEN` auth, no stored PATs. |
+| 7 | Image scan | Trivy | OS and library CVEs across both images. |
+| 8 | IaC scan | Checkov | Misconfigurations in `terraform/` and `k8s/` manifests. |
+| 9 | Dockerfile lint | Hadolint | Fails on errors, warns on warnings. |
+| 10 | Manifest update | git | Bumps image tags in deployment manifests. ArgoCD picks up the commit and reconciles. |
+
+Every running image is traceable to the exact commit that built it. `latest` is mutable and leaves no audit trail, so it is never used.
+
+---
+
+## Design decisions
+
+Grouped by security domain. Every decision is opinionated and defensible in a cloud security review.
+
+<details>
+<summary><b>Identity & access</b></summary>
 
 | Decision | Rationale |
 |---|---|
-| `npm install --ignore-scripts` | Blocks postinstall-based supply chain attacks. Axios 1.14.1 and 0.30.4 (April 2025) were compromised to drop a RAT via the `postinstall` hook. This blocks that class of attack at install time. |
+| EKS Pod Identity over IRSA | No OIDC provider to maintain, no role-arn annotations to audit. IAM binding is visible through `aws eks list-pod-identity-associations`. |
+| OIDC federation for GitHub Actions → AWS | No long-lived `AWS_ACCESS_KEY_ID` in GitHub secrets. CI credentials are minted per-workflow, scoped by trust policy, and expire in 1 hour. |
+| IAM Access Analyzer at account scope | Continuously flags resources with policies that grant access from outside the AWS account. Catches misconfigured policies before they become incidents. |
+
+</details>
+
+<details>
+<summary><b>Network isolation</b></summary>
+
+| Decision | Rationale |
+|---|---|
 | EKS nodes in private subnets | Nodes are not directly internet-reachable. NAT gateway handles outbound only. Reduces the blast radius of a compromised node. |
-| Terraform state in S3 + DynamoDB | Encrypted at rest, versioned (rollback if state is corrupted), locked against concurrent writes. |
-| Nginx pinned to SHA256 digest | Image tags are mutable. Digest guarantees byte-for-byte identity regardless of what gets pushed upstream. |
+| Default-deny NetworkPolicy | All pod-to-pod traffic is blocked by default. A compromised frontend pod cannot reach the database directly. |
+| ClusterIP for backend and database | No external load balancer, no public endpoint. Only the frontend NLB is internet-facing. |
+
+</details>
+
+<details>
+<summary><b>Secrets management</b></summary>
+
+| Decision | Rationale |
+|---|---|
+| External Secrets Operator + AWS Secrets Manager | Git is not a secrets store. Credentials live in Secrets Manager with rotation, versioning, and audit logging. ESO materializes them into Kubernetes on reconciliation. |
+| `ClusterSecretStore` scoped to a single secret ARN | No wildcards. The IAM role attached to ESO can read exactly one secret. |
+| Kubernetes secret encryption via KMS | Enabled on the EKS cluster. Secrets stored in etcd are envelope-encrypted. |
+
+</details>
+
+<details>
+<summary><b>Supply chain integrity</b></summary>
+
+| Decision | Rationale |
+|---|---|
+| `npm install --ignore-scripts` | Blocks postinstall-based supply chain attacks. Axios 1.14.1 and 0.30.4 (April 2025) were compromised to drop a RAT via the `postinstall` hook. |
+| Nginx pinned to SHA256 digest | Tags are mutable. Digest guarantees byte-for-byte identity regardless of what gets pushed upstream. |
+| SBOM + SLSA provenance on every image | Attached automatically by BuildKit. Documents what is in the image and where it was built, satisfying SLSA and EO 14028 intent. |
+| SHA tag over `latest` | Ties every running pod to the exact commit that built it. Full traceability from cluster state back to source. |
+| GHCR over Docker Hub | CI uses the built-in `GITHUB_TOKEN`. No stored PATs, no third-party registry dependency. |
+| Semgrep gate test (inverted exit code) | Semgrep exits 0 by default even when it finds vulnerabilities. The `--error` flag changes that. The gate test ensures the ruleset is not silently broken. A scanner that catches nothing is worse than no scanner. |
+| Semgrep over CodeQL for SAST | The app is simple CRUD. CodeQL taint tracking is disproportionate overhead. Semgrep pattern rules cover the Express/Node.js attack surface, each finding maps directly to a readable rule. |
+
+</details>
+
+<details>
+<summary><b>Runtime hardening</b></summary>
+
+| Decision | Rationale |
+|---|---|
 | `drop: [ALL]` capabilities | Zero Linux capabilities on frontend and backend pods. Limits post-RCE impact by removing raw socket access and privilege escalation paths. |
 | `readOnlyRootFilesystem: true` | Prevents writing webshells, tools, or malicious scripts to the container filesystem after compromise. |
-| Default-deny NetworkPolicy | All pod-to-pod traffic is blocked by default. A compromised frontend pod cannot reach the database directly. |
 | `automountServiceAccountToken: false` | Removes an auto-mounted Kubernetes API credential from every pod that does not need it. |
-| GHCR over Docker Hub | CI uses the built-in `GITHUB_TOKEN`. No stored PATs, no third-party registry dependency. |
-| SHA tag over `latest` | Ties every running pod to the exact commit that built it. Full traceability from cluster state back to source. |
-| ArgoCD GitOps | CI never holds cluster credentials. `selfHeal` enforces git as the only write path to production. Manual drift is reverted automatically. |
-| SBOM + provenance on every image | Attached automatically by BuildKit. Documents what is in the image and where it was built, satisfying SLSA and EO 14028 intent. |
-| Semgrep over CodeQL for SAST | The app is simple CRUD. CodeQL taint tracking is disproportionate overhead for this codebase. Semgrep pattern rules cover the Express/Node.js attack surface and each finding maps directly to a readable rule. |
-| Semgrep gate test (inverted exit code) | Semgrep exits 0 by default even when it finds vulnerabilities. The `--error` flag changes that behavior. The gate test ensures the ruleset is not silently broken or misconfigured. |
-| CloudTrail multi-region + log file validation | IAM and STS events log to us-east-1 regardless of the region your resources are in. Multi-region trail captures them. SHA-256 digest chain makes deleted or modified logs detectable after the fact. |
-| VPC Flow Logs to S3 | Same data as CloudWatch Logs, no ingestion cost. Custom format adds pre-NAT source addresses and TCP flags for forensic reconstruction of traffic patterns. |
-| IAM Access Analyzer | Continuously flags resources with policies that grant access from outside the AWS account. Catches misconfigured policies before they become incidents. |
 | Baseline PSS for postgres only | PostgreSQL `initdb` requires `CAP_CHOWN`. Frontend and backend enforce restricted-equivalent controls through their own pod specs. |
-| `helmet()` on the Express API | Adds CSP, `X-Frame-Options`, `Strict-Transport-Security`, `X-Content-Type-Options`, `Referrer-Policy`, and five additional headers on every response. Previously the API returned bare Express defaults with no security headers. |
-| CORS restricted to `ALLOWED_ORIGINS` | `cors()` with no config allows any origin. Locked to an explicit allowlist via env var. Returns 403 on disallowed origins. Server-to-server requests with no `Origin` header still pass through. |
-| Rate limiting: global (200/15 min) + write (30/15 min) | Global limiter prevents request flooding. Stricter per-route limit on `POST`, `PUT`, and `DELETE` reduces write-path abuse. `RateLimit-*` headers returned on every response. |
-| Input validation at the API layer | CVE IDs validated against `CVE-YYYY-NNNNN` format. Severity and status enum-checked before hitting the DB. CVSS score range enforced (0–10). Field length caps on all text inputs. Previously bad input reached the DB and surfaced as opaque 500 errors. |
+| ArgoCD GitOps with `selfHeal` | CI never holds cluster credentials. Git is the only write path to production. Manual drift is reverted automatically. |
+| `helmet()` on the Express API | Adds CSP, HSTS, and seven other headers on every response. Previously the API returned bare Express defaults. |
+| CORS restricted to `ALLOWED_ORIGINS` | `cors()` with no config allows any origin. Locked to an explicit allowlist via env var. |
+| Rate limiting: global (200/15 min) + write (30/15 min) | Global limiter prevents flooding. Stricter per-route limit on write paths reduces abuse. |
+| Input validation at the API layer | CVE IDs validated against `CVE-YYYY-NNNNN`. Severity and status enum-checked. CVSS score bounded 0–10. Field length caps on all text inputs. |
+
+</details>
+
+<details>
+<summary><b>Audit & detection</b></summary>
+
+| Decision | Rationale |
+|---|---|
+| CloudTrail multi-region + log file validation | IAM and STS events log to us-east-1 regardless of resource region. Multi-region trail captures them. SHA-256 digest chain makes tampering detectable after the fact. |
+| VPC Flow Logs to S3 | Same data as CloudWatch Logs, no ingestion cost. Custom format adds pre-NAT source addresses and TCP flags for forensic reconstruction. |
+| Terraform state in S3 + DynamoDB | Encrypted at rest, versioned (rollback if state is corrupted), locked against concurrent writes. |
+| Security logs bucket with `force_destroy = true` | 90-day lifecycle, public access blocked, versioning on. `force_destroy` lets `terraform destroy` clean up without a manual `aws s3 rm` step. |
+
+</details>
+
+---
+
+## The application
+
+VulnOps lets teams submit CVEs with an ID, severity, affected product, CVSS score, description, and remediation status. Each entry supports threaded notes. The submission form includes a live CVSS v3.1 calculator built on the official FIRST formula — scores update in real time as attack vector, complexity, privileges, and impact metrics are selected.
+
+<p align="center">
+  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/Vulnops-Dashboard.png" alt="VulnOps dashboard" width="100%"/>
+</p>
+
+<p align="center">
+  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/Vulnops-CVE.png" alt="VulnOps CVE submission form" width="100%"/>
+</p>
 
 ---
 
 ## Running locally
 
-**With Docker Compose:**
+<details>
+<summary><b>Docker Compose (recommended)</b></summary>
 
 ```bash
 docker compose up --build
 ```
 
-Frontend at `http://localhost`. API at `http://localhost:5000`. Database tables are created automatically on first start.
+Frontend at `http://localhost`. API at `http://localhost:5000`. Database tables are created on first start.
 
 ```bash
-# Tear down and remove volumes
-docker compose down -v
+docker compose down -v   # teardown and drop volumes
 ```
 
-**Without Docker** (Node.js 20+ and PostgreSQL required):
+</details>
+
+<details>
+<summary><b>Without Docker (Node.js 20+ and PostgreSQL)</b></summary>
 
 ```bash
 # Create the database
@@ -182,106 +362,131 @@ npm run dev
 
 Frontend at `http://localhost:5173`. API at `http://localhost:5000`.
 
+</details>
+
 ---
 
-## Deploying to AWS (EKS)
+## Deploying to AWS
 
-**Prerequisites:** AWS CLI configured with appropriate IAM permissions, Terraform >= 1.5, kubectl, Helm 3.
+**Prerequisites:** AWS CLI configured, Terraform ≥ 1.5, kubectl, Helm 3.
 
-**0. Bootstrap Terraform backend (first time only):**
+### Quick start (automated)
 
-Terraform stores its state in an S3 bucket and uses DynamoDB to prevent concurrent writes. These need to exist before `terraform init` can run, and they sit outside the stack on purpose — they should survive every `terraform destroy`. Run the bootstrap script once:
+Three commands, ~10 minutes from zero to live cluster with the app deployed.
+
+```bash
+# 1. Bootstrap Terraform state backend (once, never destroyed)
+./scripts/bootstrap-state.sh
+
+# 2. Provision infrastructure
+cd terraform && cp terraform.tfvars.example terraform.tfvars
+# edit terraform.tfvars and set alert_email
+terraform init && terraform apply -var-file=terraform.tfvars
+aws eks update-kubeconfig --region us-east-1 --name vulnops-eks
+
+# 3. Bootstrap cluster tooling (ESO, ArgoCD, CORS injection)
+cd .. && ./scripts/bootstrap-cluster.sh
+```
+
+The script prints the frontend URL when done. Click the SNS confirmation email that AWS sends to the address in `terraform.tfvars`, or the cost and TTL alerts won't deliver. From this point forward, any push to `main` triggers a deployment via ArgoCD.
+
+### Full walkthrough (manual)
+
+The same deployment broken into individually-runnable steps, each explaining what it does and why.
+
+<details>
+<summary><b>Step 0 — Bootstrap the Terraform state backend</b></summary>
+
+Terraform stores its state in an S3 bucket and uses DynamoDB for state locking. These need to exist before `terraform init` can run, and they sit outside the main stack on purpose — they should survive every `terraform destroy`.
 
 ```bash
 chmod +x scripts/bootstrap-state.sh
 ./scripts/bootstrap-state.sh
 ```
 
-This creates `vulnops-terraform-state` (versioned, AES256 encrypted, public access blocked) and `vulnops-tf-lock` (pay-per-request DynamoDB table). Combined cost at this scale is less than $0.01/month. Do not destroy them.
+Creates `vulnops-terraform-state` (versioned, AES256 encrypted, public access blocked) and `vulnops-tf-lock` (pay-per-request DynamoDB table). Combined cost at this scale is under $0.01/month. Do not destroy them.
 
-**1. Provision infrastructure:**
+</details>
+
+<details>
+<summary><b>Step 1 — Provision infrastructure with Terraform</b></summary>
 
 ```bash
 cd terraform
 cp terraform.tfvars.example terraform.tfvars
-# Edit terraform.tfvars and set alert_email to your address
+# edit terraform.tfvars — set alert_email
 terraform init
 terraform apply -var-file=terraform.tfvars
 ```
 
-**2. Configure kubectl:**
+Creates: VPC (3 AZs), EKS cluster (Auto Mode, v1.32, KMS-encrypted secrets), CloudTrail trail, VPC Flow Logs, IAM Access Analyzer, security logs bucket, Secrets Manager entry for the DB credentials, cost guard (Budgets + TTL Lambda + SNS).
+
+</details>
+
+<details>
+<summary><b>Step 2 — Configure kubectl</b></summary>
 
 ```bash
 aws eks update-kubeconfig --region us-east-1 --name vulnops-eks
+kubectl get nodes
 ```
 
-**3. Bootstrap cluster tooling:**
-
-This installs the External Secrets Operator (which pulls the database credentials from AWS Secrets Manager), waits for the secret to sync, installs ArgoCD, deploys the application, and automatically injects the live NLB hostname into the backend's CORS allowlist.
-
-```bash
-chmod +x scripts/bootstrap-cluster.sh
-./scripts/bootstrap-cluster.sh
-```
-
-The script prints the frontend URL when it finishes. No manual URL lookup needed.
-
-**4. Confirm the SNS alert subscription:**
-
-AWS sends a confirmation email to the address in `terraform.tfvars` immediately after apply. Click the confirmation link or the cost and TTL alerts will not deliver.
-
-From this point forward, any push to `main` that updates the image tags in the manifests triggers a deployment automatically via ArgoCD.
-
----
-
-### Verifying the deployment
-
-Once the bootstrap script completes and pods are running:
-
-```bash
-# All 5 pods should be Running
-kubectl get pods -n vulnops
-
-# Database secret synced from Secrets Manager (not from git)
-kubectl get externalsecret -n vulnops
-
-# ESO has no AWS credentials — Pod Identity is the auth path
-kubectl get sa external-secrets -n external-secrets -o yaml | grep role-arn
-# → no output confirms Pod Identity, not IRSA
-```
-
-See `bootstrap/external-secrets/README.md` for ESO verification steps and secret rotation instructions.
+</details>
 
 <details>
-<summary>Manual setup (if you prefer to run steps individually)</summary>
+<summary><b>Step 3 — Install External Secrets Operator</b></summary>
+
+ESO authenticates to AWS through Pod Identity (set up in Terraform) and syncs secrets from AWS Secrets Manager into Kubernetes.
 
 ```bash
-# Install External Secrets Operator
 helm repo add external-secrets https://charts.external-secrets.io
 helm repo update
 helm upgrade --install external-secrets external-secrets/external-secrets \
   --namespace external-secrets --create-namespace \
   --values bootstrap/external-secrets/helm-values.yaml --wait
+```
 
-# Configure ESO to pull from AWS Secrets Manager
+</details>
+
+<details>
+<summary><b>Step 4 — Configure ESO to pull from Secrets Manager</b></summary>
+
+```bash
 kubectl apply -f bootstrap/external-secrets/cluster-secret-store.yaml
 kubectl create namespace vulnops --dry-run=client -o yaml | kubectl apply -f -
 kubectl apply -f bootstrap/external-secrets/external-secret.yaml
 
-# Wait for DB secret to sync
+# Wait for the database secret to materialize
 kubectl wait externalsecret/vulnops-db-secret -n vulnops --for=condition=Ready --timeout=60s
+```
 
-# Install ArgoCD
+The `ClusterSecretStore` is scoped to a single secret ARN — the IAM role can read exactly one secret, no wildcards. See `bootstrap/external-secrets/README.md` for rotation instructions.
+
+</details>
+
+<details>
+<summary><b>Step 5 — Install ArgoCD and deploy the app</b></summary>
+
+```bash
 kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
 kubectl create -n argocd \
   -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml \
   --save-config 2>/dev/null || true
 kubectl wait --for=condition=available --timeout=120s deployment/argocd-server -n argocd
 
-# Deploy the application
 kubectl apply -f k8s/argocd/application.yaml
+```
 
-# Inject CORS allowlist with live NLB hostname
+ArgoCD reconciles `k8s/` from git. `selfHeal: true` reverts manual `kubectl apply` drift automatically.
+
+</details>
+
+<details>
+<summary><b>Step 6 — Inject the NLB hostname into the backend CORS allowlist</b></summary>
+
+The Express CORS policy is pinned to `ALLOWED_ORIGINS`. The NLB hostname only exists after AWS provisions it, so it's injected after the fact.
+
+```bash
 NLB_HOST=""
 while [ -z "$NLB_HOST" ]; do
   NLB_HOST=$(kubectl get svc -n vulnops vulnops-frontend \
@@ -294,6 +499,30 @@ echo "Frontend URL: http://$NLB_HOST"
 
 </details>
 
+<details>
+<summary><b>Step 7 — Confirm the SNS alert subscription</b></summary>
+
+AWS sends a confirmation email to the address in `terraform.tfvars` immediately after `terraform apply`. Click the confirmation link or the cost and TTL alerts will not deliver.
+
+</details>
+
+### Verifying the deployment
+
+```bash
+# All 5 pods Running
+kubectl get pods -n vulnops
+
+# Database secret synced from Secrets Manager
+kubectl get externalsecret -n vulnops
+# → STATUS=SecretSynced, READY=True
+
+# ESO uses Pod Identity, not IRSA
+kubectl get sa external-secrets -n external-secrets -o yaml | grep role-arn
+# → no output (no IRSA annotation) confirms Pod Identity
+```
+
+Full verification runbook is in [`walkthrough.md`](walkthrough.md) — 7 sections covering secrets, pod hardening, audit trail, IAM posture, cost controls, CI/CD gates, and end-to-end smoke test.
+
 ---
 
 ## Tearing down
@@ -303,11 +532,11 @@ cd terraform
 terraform destroy -var-file=terraform.tfvars
 ```
 
-This removes the EKS cluster, VPC, NAT gateway, security logs S3 bucket, CloudTrail trail, VPC Flow Logs, and IAM Access Analyzer. When the cluster is destroyed, all Kubernetes resources inside it (ArgoCD, ESO, all pods and namespaces) are removed automatically — no manual `kubectl delete` needed.
+Removes the EKS cluster, VPC, NAT gateway, security logs bucket, CloudTrail, Flow Logs, and Access Analyzer. When the cluster is destroyed, all in-cluster resources (ArgoCD, ESO, pods, namespaces) go with it — no manual `kubectl delete`.
 
-The security logs bucket has `force_destroy = true` so Terraform empties all versioned CloudTrail and Flow Log objects before deleting. No manual cleanup needed.
+The security logs bucket has `force_destroy = true` so Terraform empties versioned CloudTrail and Flow Log objects before deleting.
 
-The Terraform state bucket and DynamoDB lock table are not touched — they persist across destroy cycles by design.
+The Terraform state bucket and DynamoDB lock table persist across destroy cycles by design. Do not delete them.
 
 ---
 
@@ -315,8 +544,8 @@ The Terraform state bucket and DynamoDB lock table are not touched — they pers
 
 ```
 VulnOps/
-├── backend/              # Express API and database schema
-├── frontend/             # React + Vite + nginx.conf
+├── backend/               # Express API and database schema
+├── frontend/              # React + Vite + nginx.conf
 ├── k8s/
 │   ├── namespace.yaml
 │   ├── secrets.yaml.example
@@ -326,12 +555,15 @@ VulnOps/
 │   ├── network-policies/
 │   └── argocd/
 ├── bootstrap/
-│   └── external-secrets/ # ESO install runbook and manifests
-├── terraform/            # VPC, EKS cluster, cost guard, and security monitoring
+│   └── external-secrets/  # ESO install runbook and manifests
+├── terraform/             # VPC, EKS, cost guard, security monitoring
 ├── scripts/
-│   ├── bootstrap-state.sh   # Creates S3 state bucket and DynamoDB lock table
-│   └── bootstrap-cluster.sh # Installs ESO and ArgoCD after terraform apply
-├── .github/workflows/    # GitHub Actions CI pipeline
-├── deploy/               # EC2 setup script for manual deployment
-└── docker-compose.yml
+│   ├── bootstrap-state.sh     # Creates S3 state bucket and DynamoDB lock table
+│   └── bootstrap-cluster.sh   # Installs ESO and ArgoCD after terraform apply
+├── .github/workflows/     # GitHub Actions CI pipeline
+├── deploy/                # EC2 setup script for manual deployment
+├── docker-compose.yml
+├── walkthrough.md         # 7-section security verification runbook
+└── VulnOps-Architecture.png
 ```
+
