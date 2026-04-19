@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/Vulnops-banner.png" alt="VulnOps" width="100%"/>
+  <img src="Vulnops-banner.svg" alt="VulnOps" width="100%"/>
 </p>
 
 # VulnOps
