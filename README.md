@@ -256,29 +256,16 @@ See `bootstrap/external-secrets/README.md` for ESO verification steps and secret
 
 ## Tearing down
 
-**Remove the application and namespace:**
-
-```bash
-kubectl delete -f k8s/argocd/application.yaml
-kubectl delete namespace vulnops
-```
-
-**Remove ArgoCD:**
-
-```bash
-kubectl delete namespace argocd
-```
-
-**Destroy all AWS infrastructure:**
-
 ```bash
 cd terraform
 terraform destroy -var-file=terraform.tfvars
 ```
 
-This removes the EKS cluster, VPC, NAT gateway, security logs S3 bucket (including all CloudTrail and Flow Log objects), CloudTrail trail, VPC Flow Logs, and IAM Access Analyzer. The Terraform state bucket and DynamoDB lock table are not touched — they persist across destroy cycles by design.
+This removes the EKS cluster, VPC, NAT gateway, security logs S3 bucket, CloudTrail trail, VPC Flow Logs, and IAM Access Analyzer. When the cluster is destroyed, all Kubernetes resources inside it (ArgoCD, ESO, all pods and namespaces) are removed automatically — no manual `kubectl delete` needed.
 
-The security logs bucket has `force_destroy = true` so Terraform empties all versioned objects automatically before deleting. No manual cleanup needed.
+The security logs bucket has `force_destroy = true` so Terraform empties all versioned CloudTrail and Flow Log objects before deleting. No manual cleanup needed.
+
+The Terraform state bucket and DynamoDB lock table are not touched — they persist across destroy cycles by design.
 
 ---
 
