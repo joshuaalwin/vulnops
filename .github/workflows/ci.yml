@@ -239,9 +239,6 @@ jobs:
           vuln-type: "os,library"
           severity: "CRITICAL,HIGH"
           timeout: "10m"
-        continue-on-error: true
-        # continue-on-error: intentional — node:20-alpine build stage carries known CVEs
-        # by design (Phase 6 demo target). Remove once base image is upgraded.
 
   # ==============================================================
   # STAGE 6: IaC Security Scan (Checkov)
