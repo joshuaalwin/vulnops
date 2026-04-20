@@ -64,6 +64,33 @@ resource "aws_secretsmanager_secret_version" "db_credentials" {
 }
 
 # --------------------------------------------------------------
+# AI provider credentials (Anthropic)
+# --------------------------------------------------------------
+# Empty shell — the real ANTHROPIC_API_KEY is seeded out-of-band:
+#   aws secretsmanager put-secret-value \
+#     --secret-id vulnops/ai-credentials \
+#     --secret-string '{"ANTHROPIC_API_KEY":"sk-ant-..."}'
+# ignore_changes keeps future `terraform apply` from clobbering it.
+# --------------------------------------------------------------
+resource "aws_secretsmanager_secret" "ai_credentials" {
+  name                    = "vulnops/ai-credentials"
+  description             = "Anthropic API key consumed by the vulnops backend risk-intel route"
+  recovery_window_in_days = 0
+}
+
+resource "aws_secretsmanager_secret_version" "ai_credentials" {
+  secret_id = aws_secretsmanager_secret.ai_credentials.id
+
+  secret_string = jsonencode({
+    ANTHROPIC_API_KEY = "PLACEHOLDER_SEED_OUT_OF_BAND"
+  })
+
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
+}
+
+# --------------------------------------------------------------
 # IAM role for External Secrets Operator
 # --------------------------------------------------------------
 # Trust policy principal `pods.eks.amazonaws.com` is the Pod
@@ -97,7 +124,7 @@ resource "aws_iam_role" "external_secrets" {
 # --------------------------------------------------------------
 # GetSecretValue  — required for ESO to pull the secret
 # DescribeSecret  — required for ESO to determine rotation metadata
-# Both scoped to exactly one ARN — no wildcards.
+# Scoped to the exact ARNs of the two vulnops secrets — no wildcards.
 # --------------------------------------------------------------
 data "aws_iam_policy_document" "eso_read_db_credentials" {
   statement {
@@ -108,13 +135,16 @@ data "aws_iam_policy_document" "eso_read_db_credentials" {
       "secretsmanager:DescribeSecret"
     ]
 
-    resources = [aws_secretsmanager_secret.db_credentials.arn]
+    resources = [
+      aws_secretsmanager_secret.db_credentials.arn,
+      aws_secretsmanager_secret.ai_credentials.arn,
+    ]
   }
 }
 
 resource "aws_iam_policy" "external_secrets" {
   name        = "vulnops-external-secrets-read"
-  description = "Read-only access to the vulnops/db-credentials secret for ESO"
+  description = "Read-only access to the vulnops Secrets Manager secrets for ESO"
   policy      = data.aws_iam_policy_document.eso_read_db_credentials.json
 }
 
@@ -213,4 +243,14 @@ output "db_credentials_secret_arn" {
 output "db_credentials_secret_name" {
   value       = aws_secretsmanager_secret.db_credentials.name
   description = "Secrets Manager secret name referenced by the ExternalSecret"
+}
+
+output "ai_credentials_secret_arn" {
+  value       = aws_secretsmanager_secret.ai_credentials.arn
+  description = "Secrets Manager secret ARN holding the Anthropic API key (seed out-of-band)"
+}
+
+output "ai_credentials_secret_name" {
+  value       = aws_secretsmanager_secret.ai_credentials.name
+  description = "Secrets Manager secret name for the AI provider credentials"
 }

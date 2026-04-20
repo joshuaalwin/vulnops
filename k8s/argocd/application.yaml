@@ -38,5 +38,7 @@ spec:
       selfHeal: true   # Revert manual kubectl changes — git is the only source of truth
     syncOptions:
       - CreateNamespace=true
-      - PrunePropagationPolicy=foreground  # Wait for child resources to be deleted before parent
-      - PruneLast=true                     # Prune after all other sync operations complete
+      - PrunePropagationPolicy=foreground   # Wait for child resources to be deleted before parent
+      - PruneLast=true                      # Prune after all other sync operations complete
+      - RespectIgnoreDifferences=true       # Honor ignoreDifferences during sync too, not just drift detection
+                                            # (without this, every sync overwrites ALLOWED_ORIGINS back to "")
