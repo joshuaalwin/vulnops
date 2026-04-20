@@ -17,16 +17,6 @@
 
 ---
 
-## The application
-
-VulnOps lets teams submit CVEs with an ID, severity, affected product, CVSS score, description, and remediation status. Each entry supports threaded notes. The submission form includes a live CVSS v3.1 calculator built on the official FIRST formula — scores update in real time as attack vector, complexity, privileges, and impact metrics are selected.
-
-<p align="center">
-  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/Vulnops-Dashboard.png" alt="VulnOps dashboard" width="100%"/>
-</p>
-
----
-
 ## Architecture
 
 <p align="center">
