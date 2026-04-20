@@ -239,6 +239,8 @@ jobs:
           vuln-type: "os,library"
           severity: "CRITICAL,HIGH"
           timeout: "10m"
+          # Exclude npm's own bundled deps — not part of app runtime attack surface
+          skip-dirs: "/usr/local/lib/node_modules/npm"
 
   # ==============================================================
   # STAGE 6: IaC Security Scan (Checkov)
