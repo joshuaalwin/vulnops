@@ -20,11 +20,8 @@
 ## Architecture
 
 <p align="center">
-  <a href="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/VulnOps-Architecture.png">
-    <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/VulnOps-Architecture.png" alt="VulnOps architecture" width="100%"/>
-  </a>
+  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/VulnOps-Architecture.png" alt="VulnOps architecture" width="100%"/>
 </p>
-<p align="center"><sub>Click to view full size</sub></p>
 
 CI authenticates to AWS with a short-lived OIDC token, builds images into GHCR with provenance attached, and commits a SHA-tagged manifest back to git. ArgoCD syncs the cluster from there — no CI credentials touch it. Pods call Secrets Manager through the Pod Identity Agent, which swaps a projected service account token for a 15-minute STS credential scoped to one ARN. The NLB is the only public endpoint; backend and database are ClusterIP behind default-deny NetworkPolicies.
 
