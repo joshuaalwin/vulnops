@@ -17,6 +17,16 @@
 
 ---
 
+## The application
+
+VulnOps lets teams submit CVEs with an ID, severity, affected product, CVSS score, description, and remediation status. Each entry supports threaded notes. The submission form includes a live CVSS v3.1 calculator built on the official FIRST formula — scores update in real time as attack vector, complexity, privileges, and impact metrics are selected.
+
+<p align="center">
+  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/Vulnops-Dashboard.png" alt="VulnOps dashboard" width="100%"/>
+</p>
+
+---
+
 ## Architecture
 
 <p align="center">
@@ -336,20 +346,6 @@ Grouped by security domain. Every decision is opinionated and defensible in a cl
 | Security logs bucket with `force_destroy = true` | 90-day lifecycle, public access blocked, versioning on. `force_destroy` lets `terraform destroy` clean up without a manual `aws s3 rm` step. |
 
 </details>
-
----
-
-## The application
-
-VulnOps lets teams submit CVEs with an ID, severity, affected product, CVSS score, description, and remediation status. Each entry supports threaded notes. The submission form includes a live CVSS v3.1 calculator built on the official FIRST formula — scores update in real time as attack vector, complexity, privileges, and impact metrics are selected.
-
-<p align="center">
-  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/Vulnops-Dashboard.png" alt="VulnOps dashboard" width="100%"/>
-</p>
-
-<p align="center">
-  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/Vulnops-CVE.png" alt="VulnOps CVE submission form" width="100%"/>
-</p>
 
 ---
 
