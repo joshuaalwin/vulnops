@@ -19,9 +19,87 @@
 
 ## Architecture
 
-<p align="center">
-  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/VulnOps-Architecture.png" alt="VulnOps architecture" width="100%"/>
-</p>
+```mermaid
+flowchart TB
+    User((User / DevSecOps))
+
+    subgraph AWS_Cloud ["AWS Cloud Infrastructure (Terraform)"]
+        direction TB
+        
+        subgraph VPC ["VPC"]
+            subgraph Public_Subnet ["Public Subnets"]
+                ALB[AWS Load Balancer]
+            end
+            
+            subgraph Private_Subnet ["Private Subnets"]
+                subgraph EKS ["Amazon EKS Cluster (Auto Mode)"]
+                    
+                    subgraph GitOps ["GitOps & CI/CD"]
+                        GitHubActions["GitHub Actions"] -.->|Build & Push| Registry[(Container Registry)]
+                        ArgoCD["ArgoCD"] -.->|Sync K8s Manifests| GitHubRepo[(GitHub Repo)]
+                    end
+
+                    subgraph Secrets ["Secrets Management"]
+                        PodIdentity["Pod Identity Agent"]
+                        ESO["External Secrets Operator"]
+                        SecretsManager["AWS Secrets Manager"]
+                        ESO -->|GetSecretValue| SecretsManager
+                        PodIdentity -->|STS:AssumeRoleForPodIdentity| ESO
+                    end
+                    
+                    subgraph K8s_Namespace ["K8s Namespace: vulnops"]
+                        direction TB
+                        
+                        subgraph Frontend_Pod ["Frontend Pods"]
+                            ReactUI[React + Vite UI]
+                            NginxFE[Nginx Web Server]
+                        end
+                        
+                        subgraph Backend_Pod ["Backend Pods"]
+                            NodeAPI[Node.js / Express API]
+                            IntelModules["Threat Intel Modules\n(NVD, EPSS, KEV)"]
+                        end
+                        
+                        subgraph Database_Pod ["Database Pods"]
+                            PostgreSQL[(PostgreSQL 16)]
+                            PVC[Persistent Volume Claim]
+                        end
+                        
+                        Frontend_Pod -->|port 5000| Backend_Pod
+                        Backend_Pod -->|port 5432| Database_Pod
+                        PostgreSQL --- PVC
+                    end
+
+                    Secrets -->|materialize K8s secret| K8s_Namespace
+                end
+            end
+        end
+    end
+
+    subgraph Threat_Intel ["External Threat Intelligence APIs"]
+        NVD[NVD API]
+        EPSS[FIRST EPSS API]
+        KEV[CISA KEV Catalog]
+    end
+
+    User -->|HTTPS :80| ALB
+    ALB -->|port 8080| Frontend_Pod
+    IntelModules -->|Fetch| NVD
+    IntelModules -->|Fetch| EPSS
+    IntelModules -->|Fetch| KEV
+
+    classDef aws fill:#FF9900,stroke:#232F3E,stroke-width:2px,color:black;
+    classDef k8s fill:#326CE5,stroke:#fff,stroke-width:2px,color:white;
+    classDef db fill:#336791,stroke:#fff,stroke-width:2px,color:white;
+    classDef external fill:#F44336,stroke:#fff,stroke-width:2px,color:white;
+    classDef secrets fill:#2e7d32,stroke:#fff,stroke-width:2px,color:white;
+
+    class AWS_Cloud,VPC,Public_Subnet,Private_Subnet aws;
+    class EKS,K8s_Namespace k8s;
+    class PostgreSQL,PVC db;
+    class NVD,EPSS,KEV external;
+    class PodIdentity,ESO,SecretsManager secrets;
+```
 
 CI authenticates to AWS with a short-lived OIDC token, builds images into GHCR with provenance attached, and commits a SHA-tagged manifest back to git. ArgoCD syncs the cluster from there — no CI credentials touch it. Pods call Secrets Manager through the Pod Identity Agent, which swaps a projected service account token for a 15-minute STS credential scoped to one ARN. The NLB is the only public endpoint; backend and database are ClusterIP behind default-deny NetworkPolicies.
 
