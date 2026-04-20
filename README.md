@@ -23,7 +23,7 @@
   <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/VulnOps-Architecture.png" alt="VulnOps architecture" width="100%"/>
 </p>
 
-VulnOps is a 3-tier CVE registry (React + Express + PostgreSQL) running on AWS EKS. The application is deliberately simple. The security architecture around it — pod hardening, network segmentation, secrets lifecycle, supply chain attestation, audit trail — is the point of the project.
+The diagram above traces the full trust boundary: GitHub Actions authenticates to AWS via OIDC (no stored keys), builds images pushed to GHCR, and commits updated manifests to git. ArgoCD picks up those commits and reconciles the `vulnops` namespace on EKS. At runtime, pods never hold AWS credentials — the Pod Identity Agent exchanges projected service account tokens for short-lived STS credentials scoped to a single Secrets Manager ARN. The NLB is the only internet-facing endpoint; backend and database are ClusterIP with default-deny NetworkPolicies between tiers.
 
 ---
 
