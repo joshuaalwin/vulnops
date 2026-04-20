@@ -19,7 +19,7 @@
 
 ## Contents
 
-[The application](#the-application) · [Architecture](#architecture) · [What this demonstrates](#what-this-demonstrates) · [Design decisions](#design-decisions) · [Features in action](#features-in-action) · [Threat intelligence & AI](#threat-intelligence--ai) · [Security architecture](#security-architecture) · [CI/CD gates](#cicd-security-gates) · [Walkthrough](#walkthrough) · [Deploy](#deploying-to-aws) · [Tear down](#tearing-down)
+[The application](#the-application) · [Features in action](#features-in-action) · [Architecture](#architecture) · [What this demonstrates](#what-this-demonstrates) · [Design decisions](#design-decisions) · [Threat intelligence & AI](#threat-intelligence--ai) · [Security architecture](#security-architecture) · [CI/CD gates](#cicd-security-gates) · [Walkthrough](#walkthrough) · [Deploy](#deploying-to-aws) · [Tear down](#tearing-down)
 
 ---
 
@@ -28,8 +28,36 @@
 VulnOps lets teams submit CVEs with an ID, severity, affected product, CVSS score, description, and remediation status. Each entry supports threaded notes. The submission form includes a live CVSS v3.1 calculator built on the official FIRST formula — scores update in real time as attack vector, complexity, privileges, and impact metrics are selected.
 
 <p align="center">
-  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/Vulnops-Dashboard.png" alt="VulnOps dashboard" width="100%"/>
+  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/All-Vulns.png" alt="VulnOps vulnerability registry" width="100%"/>
 </p>
+
+---
+
+## Features in action
+
+### Auto-enrichment from NVD
+
+<p align="center">
+  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/NVD-Lookup.png" alt="NVD auto-enrichment" width="90%"/>
+</p>
+
+On CVE submission, the backend pulls CVSS, CWE, and affected-version data directly from the NIST NVD API — no manual severity entry required.
+
+### Structured vulnerability record
+
+<p align="center">
+  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/Vuln-description.png" alt="Vulnerability detail view" width="90%"/>
+</p>
+
+Each CVE stores the NVD description, affected product metadata, EPSS exploit-prediction score, and CISA KEV status in one auditable record.
+
+### AI-generated risk intelligence
+
+<p align="center">
+  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/AI-Risk.png" alt="Claude risk synthesis" width="90%"/>
+</p>
+
+Claude Sonnet 4.6 synthesizes CVSS, EPSS, KEV, and product context into a composite risk score, compliance mappings (PCI DSS, SOX ITGC, NIST CSF, CIS v8), and prioritized remediation actions. Streamed via SSE with prompt caching.
 
 ---
 
@@ -119,34 +147,6 @@ Every decision is opinionated and defensible in a cloud security review.
 | VPC Flow Logs to S3 | Same data as CloudWatch Logs, no ingestion cost. Custom format adds pre-NAT source addresses and TCP flags for forensic reconstruction. |
 | Terraform state in S3 + DynamoDB | Encrypted at rest, versioned (rollback if state is corrupted), locked against concurrent writes. |
 | Security logs bucket with `force_destroy = true` | 90-day lifecycle, public access blocked, versioning on. `force_destroy` lets `terraform destroy` clean up without a manual `aws s3 rm` step. |
-
----
-
-## Features in action
-
-### Auto-enrichment from NVD
-
-<p align="center">
-  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/NVD-Lookup.png" alt="NVD auto-enrichment" width="90%"/>
-</p>
-
-On CVE submission, the backend pulls CVSS, CWE, and affected-version data directly from the NIST NVD API — no manual severity entry required.
-
-### Structured vulnerability record
-
-<p align="center">
-  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/Vuln-description.png" alt="Vulnerability detail view" width="90%"/>
-</p>
-
-Each CVE stores the NVD description, affected product metadata, EPSS exploit-prediction score, and CISA KEV status in one auditable record.
-
-### AI-generated risk intelligence
-
-<p align="center">
-  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/AI-Risk.png" alt="Claude risk synthesis" width="90%"/>
-</p>
-
-Claude Sonnet 4.6 synthesizes CVSS, EPSS, KEV, and product context into a composite risk score, compliance mappings (PCI DSS, SOX ITGC, NIST CSF, CIS v8), and prioritized remediation actions. Streamed via SSE with prompt caching.
 
 ---
 
