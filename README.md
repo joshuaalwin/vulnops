@@ -424,6 +424,8 @@ Frontend at `http://localhost:5173`. API at `http://localhost:5000`.
 
 **Prerequisites:** AWS CLI configured, Terraform ≥ 1.5, kubectl, Helm 3.
 
+First-time AWS setup (IAM user, policies, CLI config): see **[SETUP.md](SETUP.md)**.
+
 ### Quick start (automated)
 
 Three commands, ~10 minutes from zero to live cluster with the app deployed.
