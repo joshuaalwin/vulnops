@@ -41,6 +41,34 @@ VulnOps is a 3-tier CVE registry (React + Express + PostgreSQL) running on AWS E
 
 ---
 
+## Features in action
+
+### Auto-enrichment from NVD
+
+<p align="center">
+  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/NVD-Lookup.png" alt="NVD auto-enrichment" width="90%"/>
+</p>
+
+On CVE submission, the backend pulls CVSS, CWE, and affected-version data directly from the NIST NVD API — no manual severity entry required.
+
+### Structured vulnerability record
+
+<p align="center">
+  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/Vuln-description.png" alt="Vulnerability detail view" width="90%"/>
+</p>
+
+Each CVE stores the NVD description, affected product metadata, EPSS exploit-prediction score, and CISA KEV status in one auditable record.
+
+### AI-generated risk intelligence
+
+<p align="center">
+  <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/AI-Risk.png" alt="Claude risk synthesis" width="90%"/>
+</p>
+
+Claude Sonnet 4.6 synthesizes CVSS, EPSS, KEV, and product context into a composite risk score, compliance mappings (PCI DSS, SOX ITGC, NIST CSF, CIS v8), and prioritized remediation actions. Streamed via SSE with prompt caching.
+
+---
+
 ## Walkthrough
 
 > **Video walkthrough — coming soon.** A 2-minute screen recording will land here once recorded.
