@@ -11,7 +11,7 @@ spec:
 
   source:
     repoURL: https://github.com/joshuaalwin/vulnops.git
-    targetRevision: feat/pod-identity-eso
+    targetRevision: main
     path: k8s
     # Exclude the argocd/ subdirectory itself to avoid ArgoCD trying to manage its own Application
     directory:
