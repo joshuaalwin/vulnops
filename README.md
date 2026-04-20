@@ -23,7 +23,27 @@
   <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/VulnOps-Architecture.png" alt="VulnOps architecture" width="100%"/>
 </p>
 
-The diagram above traces the full trust boundary: GitHub Actions authenticates to AWS via OIDC (no stored keys), builds images pushed to GHCR, and commits updated manifests to git. ArgoCD picks up those commits and reconciles the `vulnops` namespace on EKS. At runtime, pods never hold AWS credentials — the Pod Identity Agent exchanges projected service account tokens for short-lived STS credentials scoped to a single Secrets Manager ARN. The NLB is the only internet-facing endpoint; backend and database are ClusterIP with default-deny NetworkPolicies between tiers.
+```
+# every push to main
+GitHub Actions → AWS [OIDC: 1h token, no stored keys]
+               → GHCR [image + SBOM + SLSA provenance]
+               → git commit [SHA tag: every running pod traces back here]
+                     ↓
+               ArgoCD reconciles k8s/ [selfHeal: manual kubectl drift auto-reverted]
+
+# pod calls Secrets Manager
+pod → Pod Identity Agent → STS:AssumeRoleForPodIdentity
+                                 ↓
+                           IAM role [one secret ARN, no wildcards]
+                                 ↓
+                           env var in pod [never stored on disk]
+
+# inbound traffic
+internet → NLB [only public endpoint]
+               → frontend [nginx, non-root, port 8080]
+                     → backend [ClusterIP; NetworkPolicy: port 5000 from frontend only]
+                           → postgres [ClusterIP; NetworkPolicy: port 5432 from backend only]
+```
 
 ---
 
