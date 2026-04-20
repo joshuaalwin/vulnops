@@ -12,6 +12,9 @@ RUN npm run build
 # same tag would be pulled silently. Digest guarantees byte-for-byte identity.
 FROM nginx:1.27-alpine@sha256:62223d644fa234c3a1cc785ee14242ec47a77364226f1c811d2f669f96dc2ac8 AS production
 
+# Patch OS packages — digest-pinning prevents tag mutation; apk upgrade keeps packages current.
+RUN apk upgrade --no-cache
+
 # Security: remove default nginx config
 RUN rm -rf /etc/nginx/conf.d/default.conf /usr/share/nginx/html/*
 
