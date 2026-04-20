@@ -23,27 +23,7 @@
   <img src="https://github.com/joshuaalwin/vulnops/releases/download/static-assets/VulnOps-Architecture.png" alt="VulnOps architecture" width="100%"/>
 </p>
 
-```
-# every push to main
-GitHub Actions → AWS [OIDC: 1h token, no stored keys]
-               → GHCR [image + SBOM + SLSA provenance]
-               → git commit [SHA tag: every running pod traces back here]
-                     ↓
-               ArgoCD reconciles k8s/ [selfHeal: manual kubectl drift auto-reverted]
-
-# pod calls Secrets Manager
-pod → Pod Identity Agent → STS:AssumeRoleForPodIdentity
-                                 ↓
-                           IAM role [one secret ARN, no wildcards]
-                                 ↓
-                           env var in pod [never stored on disk]
-
-# inbound traffic
-internet → NLB [only public endpoint]
-               → frontend [nginx, non-root, port 8080]
-                     → backend [ClusterIP; NetworkPolicy: port 5000 from frontend only]
-                           → postgres [ClusterIP; NetworkPolicy: port 5432 from backend only]
-```
+CI authenticates to AWS with a short-lived OIDC token, builds images into GHCR with provenance attached, and commits a SHA-tagged manifest back to git. ArgoCD syncs the cluster from there — no CI credentials touch it. Pods call Secrets Manager through the Pod Identity Agent, which swaps a projected service account token for a 15-minute STS credential scoped to one ARN. The NLB is the only public endpoint; backend and database are ClusterIP behind default-deny NetworkPolicies.
 
 ---
 
