@@ -1,15 +1,12 @@
 # ---- Build stage ----
-# INTENTIONAL: node:20-alpine is used here deliberately to carry known CVEs.
-# This will cause the Trivy image scan in the Phase 6 CI pipeline to fail,
-# demonstrating that the security gate catches vulnerable base images.
-# Will be upgraded to a current digest-pinned image once the gate is shown working.
-FROM node:20-alpine AS build
+# Pinned to digest — tags are mutable, digest guarantees byte-for-byte identity.
+FROM node:22-alpine@sha256:cb15fca92530d7ac113467696cf1001208dac49c3c64355fd1348c11a88ddf8f AS build
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci --only=production && npm cache clean --force
 
 # ---- Production stage ----
-FROM node:20-alpine AS production
+FROM node:22-alpine@sha256:cb15fca92530d7ac113467696cf1001208dac49c3c64355fd1348c11a88ddf8f AS production
 
 # Security: run as non-root user
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup

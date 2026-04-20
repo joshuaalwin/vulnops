@@ -230,7 +230,7 @@ jobs:
         run: docker build -t vulnops-${{ matrix.component }}:scan ./${{ matrix.component }}
 
       - name: Run Trivy
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: "vulnops-${{ matrix.component }}:scan"
           format: "table"
