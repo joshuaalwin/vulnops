@@ -604,10 +604,10 @@ Tools and plugins used:
 
 | Tool | Role |
 |---|---|
-| **Claude Code** | Agentic CLI — code generation, refactoring, shell execution, and implementation across all phases |
+| **Claude Code** | Agentic CLI used for code generation, refactoring, shell execution, and implementation across all phases |
 | **Superpowers plugin** | Structured skill workflows for brainstorming, planning, execution, and code review |
-| **claude-mem plugin** | Cross-session persistent memory — project context and decisions carried forward between sessions |
-| **Notion MCP** | Project notetaker — phase progress, security decisions, and session notes synced to Notion |
+| **claude-mem plugin** | Cross-session persistent memory that carried project context and decisions forward between sessions |
+| **Notion MCP** | Project notetaker used to sync phase progress, security decisions, and session notes to Notion |
 
 ---
 
