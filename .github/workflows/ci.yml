@@ -106,7 +106,6 @@ jobs:
   # ==============================================================
   # STAGE 3b: SAST — Source Scan (Semgrep)
   # Scans application source for security bugs. Results uploaded to GitHub Security tab.
-  # continue-on-error: intentional — establish baseline before gating. Remove in Phase 6.
   # ==============================================================
   sast:
     name: "SAST (Semgrep)"
@@ -131,7 +130,6 @@ jobs:
             --sarif \
             --output=semgrep.sarif \
             backend/src/ frontend/src/
-        continue-on-error: true
 
       - name: Upload SARIF to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
