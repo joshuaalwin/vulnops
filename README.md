@@ -19,7 +19,7 @@
 
 ## Contents
 
-[The application](#the-application) · [Features in action](#features-in-action) · [Architecture](#architecture) · [What this demonstrates](#what-this-demonstrates) · [Design decisions](#design-decisions) · [Threat intelligence & AI](#threat-intelligence--ai) · [Security architecture](#security-architecture) · [CI/CD gates](#cicd-security-gates) · [Walkthrough](#walkthrough) · [Deploy](#deploying-to-aws) · [Tear down](#tearing-down)
+[The application](#the-application) · [Features in action](#features-in-action) · [Architecture](#architecture) · [What this demonstrates](#what-this-demonstrates) · [Design decisions](#design-decisions) · [Threat intelligence & AI](#threat-intelligence--ai) · [Security architecture](#security-architecture) · [CI/CD gates](#cicd-security-gates) · [Walkthrough](#walkthrough) · [Deploy](#deploying-to-aws) · [Tear down](#tearing-down) · [AI disclosure](#ai-disclosure)
 
 ---
 
@@ -593,6 +593,21 @@ Removes the EKS cluster, VPC, NAT gateway, security logs bucket, CloudTrail, Flo
 The security logs bucket has `force_destroy = true` so Terraform empties versioned CloudTrail and Flow Log objects before deleting.
 
 The Terraform state bucket and DynamoDB lock table persist across destroy cycles by design. Do not delete them.
+
+---
+
+## AI disclosure
+
+**[Claude Code](https://claude.ai/code)** served as an agentic pair-programming assistant throughout all phases. Architecture, security design, and technical decision-making were led and owned by me. Claude handled implementation: writing and refactoring code, executing commands, and generating documentation under direction.
+
+Tools and plugins used:
+
+| Tool | Role |
+|---|---|
+| **Claude Code** | Agentic CLI — code generation, refactoring, shell execution, and implementation across all phases |
+| **Superpowers plugin** | Structured skill workflows for brainstorming, planning, execution, and code review |
+| **claude-mem plugin** | Cross-session persistent memory — project context and decisions carried forward between sessions |
+| **Notion MCP** | Project notetaker — phase progress, security decisions, and session notes synced to Notion |
 
 ---
 
