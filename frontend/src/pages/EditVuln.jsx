@@ -63,16 +63,61 @@ function EditVuln() {
 
   return (
     <div className="form-page">
-      <h1 className="form-page-title">Edit Vulnerability</h1>
-      <p className="form-page-subtitle">{values?.cve_id}</p>
-      <VulnForm
-        values={values}
-        onChange={handleChange}
-        onSubmit={handleSubmit}
-        submitting={submitting}
-        error={error}
-        submitLabel="Save Changes"
-      />
+      <aside className="form-context">
+        <div>
+          <h1 className="form-context-title">Edit Vulnerability</h1>
+          <p className="form-context-subtitle">
+            Update the details for <strong>{values?.cve_id}</strong>. Changes are saved immediately and reflected across the registry.
+          </p>
+        </div>
+
+        <div className="form-context-section">
+          <h3>Severity Guide</h3>
+          <div className="severity-guide">
+            {[
+              { cls: 'critical', label: 'Critical', desc: 'CVSS 9.0 – 10.0' },
+              { cls: 'high',     label: 'High',     desc: 'CVSS 7.0 – 8.9' },
+              { cls: 'medium',   label: 'Medium',   desc: 'CVSS 4.0 – 6.9' },
+              { cls: 'low',      label: 'Low',      desc: 'CVSS 0.1 – 3.9' },
+              { cls: 'info',     label: 'Info',     desc: 'No CVSS score' },
+            ].map(({ cls, label, desc }) => (
+              <div key={cls} className="severity-guide-item">
+                <span className={`severity-guide-dot ${cls}`} />
+                <span><strong>{label}</strong> — {desc}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="form-context-section">
+          <h3>Tips</h3>
+          <div className="form-tips">
+            <div className="form-tip">
+              <span className="form-tip-icon">→</span>
+              Update the status as remediation progresses
+            </div>
+            <div className="form-tip">
+              <span className="form-tip-icon">→</span>
+              Recalculate CVSS if the attack surface changes
+            </div>
+            <div className="form-tip">
+              <span className="form-tip-icon">→</span>
+              Use notes for audit trail instead of editing the description
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <main className="form-main">
+        <VulnForm
+          values={values}
+          onChange={handleChange}
+          onSubmit={handleSubmit}
+          submitting={submitting}
+          error={error}
+          submitLabel="Save Changes"
+        />
+      </main>
     </div>
   );
 }
