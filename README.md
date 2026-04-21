@@ -353,9 +353,15 @@ Every running image is traceable to the exact commit that built it. `latest` is 
 
 ## Walkthrough
 
-> **Video walkthrough — coming soon.** A 2-minute screen recording will land here once recorded.
+<p align="center">
+  <a href="https://youtu.be/55dSZ-vnXHQ">
+    <img src="https://img.youtube.com/vi/55dSZ-vnXHQ/maxresdefault.jpg" alt="VulnOps full walkthrough" width="80%"/>
+  </a>
+</p>
 
-In the meantime, every security control is independently verifiable from the command line. See [`walkthrough.md`](walkthrough.md) for the full 7-section proof script. A taste:
+> Full 33-minute walkthrough — covers infrastructure provisioning, CI/CD pipeline, Kubernetes deployment, and all security controls end to end. [Watch on YouTube](https://youtu.be/55dSZ-vnXHQ)
+
+Every security control is independently verifiable from the command line. See [`walkthrough.md`](walkthrough.md) for the full 7-section proof script. A taste:
 
 ```bash
 # Pods run as non-root with zero Linux capabilities
