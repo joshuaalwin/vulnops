@@ -80,4 +80,15 @@ module "eks" {
 
   # Allow current IAM caller (vulnops-terraform user) to manage the cluster
   enable_cluster_creator_admin_permissions = true
+
+  # Security: enable NetworkPolicy enforcement in the VPC CNI plugin.
+  # Without this, NetworkPolicy objects exist in the cluster but no controller
+  # reads or enforces them — all pod-to-pod traffic flows regardless of policy.
+  cluster_addons = {
+    vpc-cni = {
+      configuration_values = jsonencode({
+        enableNetworkPolicy = "true"
+      })
+    }
+  }
 }
