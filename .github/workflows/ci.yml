@@ -127,6 +127,7 @@ jobs:
             --config=p/nodejs \
             --config=p/owasp-top-ten \
             --config=p/javascript \
+            --error \
             --sarif \
             --output=semgrep.sarif \
             backend/src/ frontend/src/
