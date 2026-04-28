@@ -31,3 +31,6 @@ spec:
       ports:
         - port: 53
           protocol: UDP  # DNS resolution via CoreDNS
+    - ports:
+        - port: 443
+          protocol: TCP  # External HTTPS — NVD, EPSS, CISA KEV, Anthropic API

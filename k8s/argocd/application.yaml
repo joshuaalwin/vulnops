@@ -25,12 +25,12 @@ spec:
   # ALLOWED_ORIGINS is injected by bootstrap-cluster.sh after the NLB hostname is known.
   # ArgoCD must not revert it — the value changes every deploy as the NLB hostname is dynamic.
   ignoreDifferences:
-    - group: apps
-      kind: Deployment
-      name: vulnops-backend
+    - group: ""
+      kind: ConfigMap
+      name: vulnops-backend-config
       namespace: vulnops
       jqPathExpressions:
-        - '.spec.template.spec.containers[].env[] | select(.name == "ALLOWED_ORIGINS")'
+        - '.data.ALLOWED_ORIGINS'
 
   syncPolicy:
     automated:
