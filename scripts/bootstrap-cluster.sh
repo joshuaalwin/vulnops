@@ -127,8 +127,11 @@ while [ -z "$NLB_HOST" ]; do
 done
 
 echo "Injecting ALLOWED_ORIGINS: http://$NLB_HOST"
-kubectl set env deployment/vulnops-backend -n vulnops \
-  ALLOWED_ORIGINS="http://$NLB_HOST"
+kubectl patch configmap vulnops-backend-config -n vulnops \
+  --type merge \
+  -p "{\"data\":{\"ALLOWED_ORIGINS\":\"http://$NLB_HOST\"}}"
+kubectl rollout restart deployment/vulnops-backend -n vulnops
+kubectl rollout status deployment/vulnops-backend -n vulnops --timeout=120s
 
 echo ""
 echo "Cluster bootstrap complete."

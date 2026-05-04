@@ -75,7 +75,10 @@ spec:
                   name: vulnops-ai-secret
                   key: ANTHROPIC_API_KEY
             - name: ALLOWED_ORIGINS
-              value: ""  # injected by bootstrap-cluster.sh after NLB hostname is known
+              valueFrom:
+                configMapKeyRef:
+                  name: vulnops-backend-config
+                  key: ALLOWED_ORIGINS
           resources:
             requests:
               cpu: "100m"
