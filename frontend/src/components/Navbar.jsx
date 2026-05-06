@@ -1,8 +1,10 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import logo from '../assets/VulnOps.svg';
 import './Navbar.css';
 
 function Navbar() {
+  const location = useLocation();
+
   return (
     <nav className="navbar">
       <div className="navbar-inner">
@@ -11,7 +13,12 @@ function Navbar() {
           VulnOps
         </Link>
         <div className="navbar-links">
-          <Link to="/">Dashboard</Link>
+          <Link to="/" className={location.pathname === '/' ? 'nav-active' : ''}>
+            Dashboard
+          </Link>
+          <Link to="/vulnerabilities" className={location.pathname === '/vulnerabilities' ? 'nav-active' : ''}>
+            Vulnerabilities
+          </Link>
           <Link to="/add" className="btn-report">+ Report CVE</Link>
         </div>
       </div>

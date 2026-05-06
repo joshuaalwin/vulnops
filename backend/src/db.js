@@ -142,6 +142,15 @@ async function initDB() {
       );
     `);
 
+    // --- Performance indexes for stats/dashboard queries ---
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_vuln_severity ON vulnerabilities(severity);
+      CREATE INDEX IF NOT EXISTS idx_vuln_status ON vulnerabilities(status);
+      CREATE INDEX IF NOT EXISTS idx_vuln_is_kev ON vulnerabilities(is_kev);
+      CREATE INDEX IF NOT EXISTS idx_vuln_created_at ON vulnerabilities(created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_vuln_affected_product ON vulnerabilities(affected_product);
+    `);
+
     console.log('Database tables initialized');
   } finally {
     client.release();

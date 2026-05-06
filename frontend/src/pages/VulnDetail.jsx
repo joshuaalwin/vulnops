@@ -6,6 +6,7 @@ import NoteSection from '../components/NoteSection';
 import EpssBadge from '../components/EpssBadge';
 import KevBadge from '../components/KevBadge';
 import RiskIntelPanel from '../components/RiskIntelPanel';
+import ChatPanel from '../components/ChatPanel';
 import './VulnDetail.css';
 
 function VulnDetail() {
@@ -38,7 +39,7 @@ function VulnDetail() {
     try {
       const res = await fetch(`/api/vulns/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Delete failed');
-      navigate('/');
+      navigate('/vulnerabilities');
     } catch {
       setDeleting(false);
       alert('Failed to delete vulnerability');
@@ -55,7 +56,7 @@ function VulnDetail() {
   return (
     <div className="vuln-detail">
       <div className="detail-breadcrumb">
-        <Link to="/">Dashboard</Link> / <span>{vuln.cve_id}</span>
+        <Link to="/vulnerabilities">Vulnerabilities</Link> / <span>{vuln.cve_id}</span>
       </div>
 
       <div className="detail-header">
@@ -104,6 +105,7 @@ function VulnDetail() {
             notes={notes}
             onNoteAdded={(note) => setNotes([note, ...notes])}
           />
+          <ChatPanel vuln={vuln} notes={notes} />
         </div>
 
         <div className="detail-meta-panel">

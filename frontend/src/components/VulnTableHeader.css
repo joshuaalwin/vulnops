@@ -6,13 +6,43 @@
   margin-bottom: 3px;
 }
 
-.vuln-table-header span {
+.vuln-table-header span,
+.vuln-table-header .col-sort {
   font-family: var(--font-body);
   font-size: 0.65rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--text-muted);
+}
+
+.col-sort {
+  background: none;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0;
+  cursor: pointer;
+  transition: color 0.12s;
+}
+
+.col-sort:hover {
+  color: var(--text);
+}
+
+.sort-arrow {
+  font-size: 0.65rem;
+  line-height: 1;
+}
+
+.sort-inactive {
+  opacity: 0.3;
+}
+
+.sort-active {
+  color: var(--accent);
+  opacity: 1;
 }
 
 .col-cvss,
@@ -22,3 +52,9 @@
 .col-severity,
 .col-kev,
 .col-status { text-align: center; }
+
+.col-sort.col-cvss,
+.col-sort.col-epss { justify-content: flex-end; }
+
+.col-sort.col-severity,
+.col-sort.col-status { justify-content: center; }
