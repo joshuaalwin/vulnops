@@ -1,15 +1,13 @@
 /*
   VulnDetail — viewport-locked layout.
-  100vh / 1.1 compensates for the global html { zoom: 1.1 }.
-  58px  = navbar height.
-  4rem  = .main-content top + bottom padding (2rem each).
+  60px = navbar height.
+  Local padding 1.5rem top/bottom.
 */
 .vuln-detail {
-  height: calc(100vh / 1.1 - 58px - 4rem);
+  padding: 1.5rem clamp(1.5rem, 2.5vw, 3rem) 5rem;
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
-  overflow: hidden;
 }
 
 /* ── Breadcrumb ── */
@@ -139,37 +137,20 @@
   cursor: not-allowed;
 }
 
-/* ── Body grid — fills remaining height ── */
+/* ── Body grid ── */
 
 .detail-grid {
   display: grid;
   grid-template-columns: 1fr 260px;
   gap: 1.5rem;
-  flex: 1;
-  overflow: hidden;
-  min-height: 0;
+  align-items: start;
 }
 
-/* Left column scrolls internally if notes overflow */
 .detail-main {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-right: 0.5rem;
-  min-height: 0;
-}
-
-.detail-main::-webkit-scrollbar {
-  width: 4px;
-}
-.detail-main::-webkit-scrollbar-track {
-  background: transparent;
-}
-.detail-main::-webkit-scrollbar-thumb {
-  background: var(--border-bright);
-  border-radius: 2px;
+  min-width: 0;
 }
 
 .detail-section h2 {
@@ -198,6 +179,8 @@
   flex-direction: column;
   gap: 1rem;
   align-self: flex-start;
+  position: sticky;
+  top: 76px;
 }
 
 .meta-item {

@@ -1,8 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
-
-html {
-  zoom: 1.1;
-}
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -11,58 +7,111 @@ html {
 }
 
 :root {
-  --bg: #0f1117;
-  --surface: #181c26;
-  --surface-2: #1e2333;
-  --border: #252d3d;
-  --border-bright: #2f3a50;
-  --text: #e2e8f4;
-  --text-muted: #64748b;
-  --accent: #3b82f6;
-  --accent-dim: rgba(59,130,246,0.1);
+  /* surfaces — cooler, slightly bluer for ops console feel */
+  --bg: #0a0d14;
+  --bg-elevated: #0f131c;
+  --surface: #141926;
+  --surface-2: #1a2030;
+  --surface-3: #232a3d;
+  --border: #1e2433;
+  --border-bright: #2a3245;
 
-  --critical: #ef4444;
-  --high: #f97316;
-  --medium: #eab308;
-  --low: #22c55e;
-  --info: #3b82f6;
+  /* text */
+  --text: #e6ebf5;
+  --text-strong: #f5f7fb;
+  --text-muted: #7a869f;
+  --text-dim: #4f5a73;
 
-  --status-open: #818cf8;
-  --status-in-progress: #f59e0b;
-  --status-mitigated: #38bdf8;
-  --status-resolved: #22c55e;
+  /* accent — refined cyan-blue, more "console" less "tailwind default" */
+  --accent: #5eb1ff;
+  --accent-strong: #84c3ff;
+  --accent-dim: rgba(94, 177, 255, 0.10);
+  --accent-glow: rgba(94, 177, 255, 0.18);
 
-  --font-body: 'Inter', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+  /* severity */
+  --critical: #f25555;
+  --high:     #f59042;
+  --medium:   #e9b949;
+  --low:      #4ade80;
+  --info:     #5eb1ff;
 
-  --radius: 6px;
+  /* status */
+  --status-open:        #8a92ff;
+  --status-in-progress: #f5a849;
+  --status-mitigated:   #5cc4f0;
+  --status-resolved:    #4ade80;
+
+  /* fonts */
+  --font-body: 'Geist', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+
+  /* radii */
+  --radius-sm: 4px;
+  --radius: 8px;
+  --radius-lg: 12px;
+
+  /* shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.45);
 }
 
-body {
+html {
+  font-size: 16px;
+}
+
+html, body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-body);
-  font-size: 15px;
-  line-height: 1.6;
+  font-size: 17px;
+  line-height: 1.55;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv11', 'ss01', 'ss03';
+  letter-spacing: -0.005em;
+}
+
+/* tabular numerals on mono — critical for data tables/dashboards */
+[class*='-mono'],
+.font-mono,
+code, pre, kbd {
+  font-family: var(--font-mono);
+  font-feature-settings: 'tnum', 'ss01';
+  font-variant-numeric: tabular-nums;
 }
 
 a {
   color: var(--accent);
   text-decoration: none;
+  transition: color 0.15s;
 }
 
-a:hover {
-  text-decoration: underline;
-}
+a:hover { color: var(--accent-strong); text-decoration: none; }
 
 button, input, select, textarea {
   cursor: pointer;
   font-family: var(--font-body);
+  font-size: inherit;
+  color: inherit;
 }
 
 input, textarea { cursor: text; }
+
+::selection {
+  background: var(--accent-glow);
+  color: var(--text-strong);
+}
+
+/* scrollbar polish */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb {
+  background: var(--surface-2);
+  border-radius: 999px;
+  border: 2px solid var(--bg);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--surface-3); }
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }

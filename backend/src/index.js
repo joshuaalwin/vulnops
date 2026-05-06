@@ -10,6 +10,8 @@ const notesRouter = require('./routes/notes');
 const nvdLookupRouter = require('./routes/nvdLookup');
 const { startKevRefreshLoop } = require('./kev');
 const riskIntelRouter = require('./routes/riskIntel');
+const statsRouter = require('./routes/stats');
+const chatRouter = require('./routes/chat');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -64,6 +66,8 @@ app.use('/api/vulns', vulnsRouter(writeLimiter));
 app.use('/api/notes', notesRouter(writeLimiter));
 app.use('/api/nvd', nvdLookupRouter());
 app.use('/api/risk-intel', riskIntelRouter(aiLimiter));
+app.use('/api/stats', statsRouter());
+app.use('/api/chat', chatRouter(aiLimiter));
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'vulnops-backend' });
